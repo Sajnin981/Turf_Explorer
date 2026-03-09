@@ -1,0 +1,23 @@
+package com.turfexplorer.dto;
+
+import lombok.Data;
+
+import java.time.LocalDate;
+import java.time.LocalDateTime;
+
+@Data
+public class BookingResponse {
+    private Long id;
+    private Long userId;
+    private Long turfId;
+    private Long slotId;
+    private LocalDate bookingDate;
+    private String status;
+    private LocalDateTime createdAt;
+    
+    // Additional fields for detailed view
+    private String turfName;
+    private String turfLocation;
+    private String slotTime;
+    private Double price;
+}

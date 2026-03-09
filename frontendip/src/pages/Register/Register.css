@@ -1,0 +1,43 @@
+/* Import base auth styles */
+@import '../Login/Login.css';
+
+/* Additional styles specific to Register page */
+.terms-section {
+  margin: 15px 0;
+}
+
+.terms-link {
+  color: var(--primary-green);
+  font-weight: 500;
+  transition: color 0.3s ease;
+}
+
+.terms-link:hover {
+  color: var(--dark-green);
+  text-decoration: underline;
+}
+
+/* Features list for register page */
+.features-list {
+  margin-top: 30px;
+  display: flex;
+  flex-direction: column;
+  gap: 20px;
+}
+
+.feature {
+  font-size: 1.05rem;
+  padding: 12px 20px;
+  background: rgba(255, 255, 255, 0.2);
+  border-radius: 12px;
+  backdrop-filter: blur(10px);
+  text-align: left;
+}
+
+/* Override for register page to handle more form fields */
+@media (max-width: 992px) {
+  .auth-content {
+    max-height: 90vh;
+    overflow-y: auto;
+  }
+}
