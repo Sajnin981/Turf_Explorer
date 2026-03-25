@@ -22,6 +22,8 @@ CREATE TABLE turfs (
     id BIGINT PRIMARY KEY AUTO_INCREMENT,
     name VARCHAR(255) NOT NULL,
     location VARCHAR(255) NOT NULL,
+    latitude DOUBLE,
+    longitude DOUBLE,
     turf_type VARCHAR(50) NOT NULL,
     price_per_hour DECIMAL(10, 2) NOT NULL,
     description TEXT,
@@ -112,10 +114,10 @@ INSERT INTO users (name, email, password, role) VALUES
 ('John Doe', 'john@example.com', '$2a$10$xBDUuA0IfbTv3pZ40Rwk0exIHFIBSHd2LQLSByLpUj2u1EjNvlpAW', 'USER');
 
 -- Insert Sample Turfs
-INSERT INTO turfs (name, location, turf_type, price_per_hour, description, image_url, owner_id, status) VALUES
-('Chittagong Sports Arena', 'Agrabad, Chittagong', 'Football', 1500.00, 'Premium football turf with floodlights', 'https://example.com/turf1.jpg', 2, 'APPROVED'),
-('Cricket Ground Premium', 'GEC Circle, Chittagong', 'Cricket', 2000.00, 'Professional cricket ground with pavilion', 'https://example.com/turf2.jpg', 2, 'APPROVED'),
-('Multi-Sport Complex', 'Oxygen, Chittagong', 'Other', 1200.00, 'Multi-purpose sports facility', 'https://example.com/turf3.jpg', 2, 'APPROVED');
+INSERT INTO turfs (name, location, latitude, longitude, turf_type, price_per_hour, description, image_url, owner_id, status) VALUES
+('Chittagong Sports Arena', 'Agrabad, Chittagong', 22.3235, 91.8123, 'Football', 1500.00, 'Premium football turf with floodlights', 'https://example.com/turf1.jpg', 2, 'APPROVED'),
+('Cricket Ground Premium', 'GEC Circle, Chittagong', 22.3569, 91.8206, 'Cricket', 2000.00, 'Professional cricket ground with pavilion', 'https://example.com/turf2.jpg', 2, 'APPROVED'),
+('Multi-Sport Complex', 'Oxygen, Chittagong', 22.3860, 91.8381, 'Other', 1200.00, 'Multi-purpose sports facility', 'https://example.com/turf3.jpg', 2, 'APPROVED');
 
 -- Insert Sample Slots
 INSERT INTO slots (turf_id, start_time, end_time, price, status) VALUES

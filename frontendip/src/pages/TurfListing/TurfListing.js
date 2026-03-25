@@ -5,7 +5,7 @@
 import React, { useState, useEffect } from 'react';
 import { useSearchParams } from 'react-router-dom';
 import TurfCard from '../../components/TurfCard/TurfCard';
-import { getAllTurfs } from '../../services/turfService';
+import { getAllTurfs, getNearbyTurfs } from '../../services/turfService';
 import './TurfListing.css';
 
 const TurfListing = () => {
@@ -17,6 +17,10 @@ const TurfListing = () => {
   const [sortBy, setSortBy] = useState('rating');
   const [showAvailableOnly, setShowAvailableOnly] = useState(false);
   const [locationSearch, setLocationSearch] = useState(searchParams.get('location') || '');
+  const [manualLocationQuery, setManualLocationQuery] = useState('');
+  const [radiusFilter, setRadiusFilter] = useState('all');
+  const [distanceMode, setDistanceMode] = useState(false);
+  const [locationStatus, setLocationStatus] = useState('');
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
 
@@ -25,9 +29,10 @@ const TurfListing = () => {
     async function fetchTurfs() {
       setLoading(true);
       setError('');
+      setLocationStatus('');
       try {
         const turfs = await getAllTurfs();
-        setAllTurfs(turfs);
+        handleLoadedTurfs(turfs);
       } catch (err) {
         setError('Failed to load turfs. Please try again.');
       } finally {
@@ -42,6 +47,26 @@ const TurfListing = () => {
     }
   }, [searchParams]);
 
+  function handleLoadedTurfs(turfs, options = {}) {
+    setAllTurfs(turfs);
+    const hasDistance = turfs.some(function(t) { return typeof t.distanceKm === 'number'; });
+    setDistanceMode(hasDistance);
+
+    setSortBy(function(prev) {
+      if (hasDistance && prev !== 'distance') {
+        return 'distance';
+      }
+      if (!hasDistance && prev === 'distance') {
+        return 'rating';
+      }
+      return prev;
+    });
+
+    if (options.resetRadius !== false) {
+      setRadiusFilter('all');
+    }
+  }
+
   // Step 1: Filter turfs based on user's selections
   const filteredTurfs = [];
   for (let i = 0; i < allTurfs.length; i++) {
@@ -53,7 +78,7 @@ const TurfListing = () => {
       shouldInclude = false;  // User wants available only, this one isn't
     }
     
-    // Check location search
+    // Check location search (string filter)
     if (locationSearch.trim()) {
       const searchLower = locationSearch.toLowerCase();
       const turfLocationLower = turf.location.toLowerCase();
@@ -61,6 +86,13 @@ const TurfListing = () => {
       
       if (!locationMatches) {
         shouldInclude = false;  // Location doesn't match search
+      }
+    }
+
+    if (distanceMode && radiusFilter !== 'all') {
+      const maxDistance = parseFloat(radiusFilter);
+      if (typeof turf.distanceKm !== 'number' || turf.distanceKm > maxDistance) {
+        shouldInclude = false;
       }
     }
     
@@ -106,6 +138,12 @@ const TurfListing = () => {
       const priceB = turfB.pricePerHour || 0;
       return priceB - priceA;  // Higher price comes first
     });
+  } else if (sortBy === 'distance') {
+    sortedTurfs.sort(function(turfA, turfB) {
+      const distanceA = typeof turfA.distanceKm === 'number' ? turfA.distanceKm : Number.MAX_VALUE;
+      const distanceB = typeof turfB.distanceKm === 'number' ? turfB.distanceKm : Number.MAX_VALUE;
+      return distanceA - distanceB;
+    });
   }
 
   // Handler functions for user interactions
@@ -122,6 +160,96 @@ const TurfListing = () => {
   function handleSortChange(event) {
     // When user selects a different sort option, update sort preference
     setSortBy(event.target.value);
+  }
+
+  function handleRadiusChange(event) {
+    setRadiusFilter(event.target.value);
+  }
+
+  async function loadNearbyByCoords(lat, lng, successMessage, options = {}) {
+    const manageLoading = options.manageLoading !== false;
+    if (manageLoading) {
+      setLoading(true);
+    }
+    setError('');
+    try {
+      const turfs = await getNearbyTurfs(lat, lng);
+      handleLoadedTurfs(turfs);
+      const label = successMessage || `Showing turfs near (${lat.toFixed(2)}, ${lng.toFixed(2)})`;
+      setLocationStatus(label);
+    } catch (err) {
+      setError('Failed to load nearby turfs. Please try again.');
+      setLocationStatus('');
+    } finally {
+      if (manageLoading) {
+        setLoading(false);
+      }
+    }
+  }
+
+  function handleUseCurrentLocation() {
+    if (!navigator.geolocation) {
+      setLocationStatus('Geolocation is not supported in this browser. Please enter a location manually.');
+      return;
+    }
+
+    setLocationStatus('Requesting your location...');
+    navigator.geolocation.getCurrentPosition(function(position) {
+      loadNearbyByCoords(
+        position.coords.latitude,
+        position.coords.longitude,
+        'Showing turfs closest to you'
+      );
+    }, function() {
+      setLocationStatus('Location access was denied. Use the manual search box instead.');
+    }, {
+      enableHighAccuracy: true,
+      timeout: 10000,
+    });
+  }
+
+  async function geocodeLocation(query) {
+    const endpoint = `https://nominatim.openstreetmap.org/search?format=json&limit=1&addressdetails=1&q=${encodeURIComponent(query)}&email=contact@turfexplorer.com`;
+    const response = await fetch(endpoint, {
+      headers: { Accept: 'application/json' },
+    });
+    if (!response.ok) {
+      throw new Error('Geocoding failed');
+    }
+    const data = await response.json();
+    if (!data || data.length === 0) {
+      return null;
+    }
+    const match = data[0];
+    return {
+      lat: parseFloat(match.lat),
+      lng: parseFloat(match.lon),
+      label: match.display_name?.split(',')[0] || query,
+    };
+  }
+
+  async function handleManualLocationSearch() {
+    const query = manualLocationQuery.trim();
+    if (!query) {
+      setLocationStatus('Please enter a city, neighborhood, or address to search.');
+      return;
+    }
+
+    setLoading(true);
+    setError('');
+    setLocationStatus('Finding that location...');
+    try {
+      const result = await geocodeLocation(query);
+      if (!result) {
+        setLocationStatus('No matching location was found. Try a nearby city or landmark.');
+        return;
+      }
+      await loadNearbyByCoords(result.lat, result.lng, `Showing turfs near ${result.label}`, { manageLoading: false });
+    } catch (err) {
+      setLocationStatus('Unable to resolve that address. Please try again.');
+    } finally {
+      setLoading(false);
+    }
   }
 
   if (loading) {
@@ -151,16 +279,46 @@ const TurfListing = () => {
         <div className="container">
           <h1 className="listing-title">Find Your Perfect Turf</h1>
           <p className="listing-subtitle">Browse and book sports turfs in Chittagong</p>
+          {distanceMode && (
+            <div className="distance-indicator">Sorted by nearest first</div>
+          )}
         </div>
       </div>
 
       <div className="container">
+        <div className="proximity-tools">
+          <button className="nearby-btn" onClick={handleUseCurrentLocation}>
+            Find Nearby Turfs
+          </button>
+          <div className="manual-location-form">
+            <input
+              type="text"
+              className="manual-location-input"
+              placeholder="Enter a city, area, or address"
+              value={manualLocationQuery}
+              onChange={function(event) { setManualLocationQuery(event.target.value); }}
+              onKeyDown={function(event) {
+                if (event.key === 'Enter') {
+                  handleManualLocationSearch();
+                }
+              }}
+            />
+            <button className="manual-location-button" onClick={handleManualLocationSearch}>
+              Search Area
+            </button>
+          </div>
+        </div>
+
+        {locationStatus && (
+          <p className="location-hint">{locationStatus}</p>
+        )}
+
         {/* Location Search */}
         <div className="location-search-box">
           <input 
             type="text"
             className="location-search-input"
-            placeholder="📍 Search by location (e.g., Agrabad, Khulshi, CDA Avenue...)"
+            placeholder="Filter results by neighborhood or landmark"
             value={locationSearch}
             onChange={handleLocationSearchChange}
           />
@@ -186,12 +344,25 @@ const TurfListing = () => {
               value={sortBy} 
               onChange={handleSortChange}
             >
+              {distanceMode && <option value="distance">Nearest First</option>}
               <option value="rating">Highest Rated</option>
               <option value="popular">Most Popular</option>
               <option value="priceLow">Price: Low to High</option>
               <option value="priceHigh">Price: High to Low</option>
             </select>
           </div>
+
+          {distanceMode && (
+            <div className="radius-filter">
+              <label>Radius:</label>
+              <select className="radius-select" value={radiusFilter} onChange={handleRadiusChange}>
+                <option value="all">Any distance</option>
+                <option value="5">Within 5 km</option>
+                <option value="10">Within 10 km</option>
+                <option value="20">Within 20 km</option>
+              </select>
+            </div>
+          )}
         </div>
 
         {/* Display turfs */}
@@ -205,7 +376,9 @@ const TurfListing = () => {
               <div className="no-results-icon">🔍</div>
               <h2>No Turfs Found</h2>
               <p>
-                {locationSearch.trim() 
+                {distanceMode && radiusFilter !== 'all' 
+                  ? 'No turfs within the selected radius. Try expanding the distance filter.'
+                  : locationSearch.trim() 
                   ? `No turfs found in "${locationSearch}". Try a different location.` 
                   : showAvailableOnly 
                   ? 'No available turfs at the moment.' 

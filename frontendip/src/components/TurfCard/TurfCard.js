@@ -28,10 +28,13 @@ const TurfCard = ({ turf }) => {
       <div className="turf-info">
         <h3 className="turf-name">{turf.name}</h3>
         <p className="turf-location">{"\uD83D\uDCCD"} {turf.location}</p>
+        {typeof turf.distanceKm === 'number' && (
+          <span className="distance-pill">{turf.distanceKm.toFixed(1)} km away</span>
+        )}
         
         <div className="turf-meta">
           <span className="turf-type">{"\u26BD"} {turf.type}</span>
-          <span className="turf-price">${turf.price || turf.pricePerHour}/hr</span>
+          <span className="turf-price">Tk {turf.price || turf.pricePerHour}/hr</span>
         </div>
 
         <div className="turf-stats">

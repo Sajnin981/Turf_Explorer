@@ -17,8 +17,19 @@ public class TurfController {
     private TurfService turfService;
 
     @GetMapping
-    public ResponseEntity<List<TurfResponse>> getAllTurfs() {
-        return ResponseEntity.ok(turfService.getAllApprovedTurfs());
+    public ResponseEntity<List<TurfResponse>> getAllTurfs(
+            @RequestParam(value = "lat", required = false) Double latitude,
+            @RequestParam(value = "lng", required = false) Double longitude) {
+        return ResponseEntity.ok(turfService.getAllApprovedTurfs(latitude, longitude));
+    }
+
+    @GetMapping("/nearby")
+    public ResponseEntity<List<TurfResponse>> getNearbyTurfs(
+            @RequestParam("lat") Double latitude,
+            @RequestParam("lng") Double longitude,
+            @RequestParam(value = "limit", required = false, defaultValue = "20") Integer limit) {
+        // Dedicated endpoint that always sorts by proximity and caps the page size
+        return ResponseEntity.ok(turfService.getNearbyTurfs(latitude, longitude, limit));
     }
 
     @GetMapping("/{id}")

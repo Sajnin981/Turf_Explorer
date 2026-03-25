@@ -8,11 +8,30 @@ function normalizeTurf(t) {
     image: t.imageUrl || null,
     available: t.status === 'APPROVED',
     price: t.pricePerHour,
+    latitude: t.latitude,
+    longitude: t.longitude,
+    distanceKm: typeof t.distanceKm === 'number' ? t.distanceKm : null,
   };
 }
 
-export async function getAllTurfs() {
-  const response = await api.get('/turfs');
+export async function getAllTurfs(params = {}) {
+  const searchParams = new URLSearchParams();
+  if (params.lat !== undefined && params.lat !== null) {
+    searchParams.append('lat', params.lat);
+  }
+  if (params.lng !== undefined && params.lng !== null) {
+    searchParams.append('lng', params.lng);
+  }
+
+  const query = searchParams.toString();
+  const response = await api.get(query ? `/turfs?${query}` : '/turfs');
+  return response.data.map(normalizeTurf);
+}
+
+export async function getNearbyTurfs(lat, lng, limit = 20) {
+  const response = await api.get('/turfs/nearby', {
+    params: { lat, lng, limit },
+  });
   return response.data.map(normalizeTurf);
 }
 

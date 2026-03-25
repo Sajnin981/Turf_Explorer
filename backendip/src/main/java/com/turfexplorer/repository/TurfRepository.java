@@ -13,4 +13,5 @@ public interface TurfRepository extends JpaRepository<Turf, Long> {
     List<Turf> findByOwnerId(Long ownerId);
     List<Turf> findByOwnerIdAndStatus(Long ownerId, TurfStatus status);
     long countByStatus(TurfStatus status);
+    List<Turf> findByStatusAndLatitudeIsNotNullAndLongitudeIsNotNull(TurfStatus status);
 }

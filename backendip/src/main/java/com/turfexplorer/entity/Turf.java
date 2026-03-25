@@ -24,6 +24,13 @@ public class Turf {
     
     @Column(nullable = false)
     private String location;
+
+    // Geographic coordinates used for location-based discovery features
+    @Column(name = "latitude")
+    private Double latitude;
+
+    @Column(name = "longitude")
+    private Double longitude;
     
     @Column(name = "turf_type", nullable = false)
     private String turfType;

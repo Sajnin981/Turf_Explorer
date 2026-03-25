@@ -37,6 +37,9 @@ public class OwnerService {
         Turf turf = new Turf();
         turf.setName(request.getName());
         turf.setLocation(request.getLocation());
+        // Persist coordinates when owners provide them so discovery APIs can work
+        turf.setLatitude(request.getLatitude());
+        turf.setLongitude(request.getLongitude());
         turf.setTurfType(request.getTurfType());
         turf.setPricePerHour(request.getPricePerHour());
         turf.setDescription(request.getDescription());
@@ -169,6 +172,8 @@ public class OwnerService {
         response.setId(turf.getId());
         response.setName(turf.getName());
         response.setLocation(turf.getLocation());
+        response.setLatitude(turf.getLatitude());
+        response.setLongitude(turf.getLongitude());
         response.setTurfType(turf.getTurfType());
         response.setPricePerHour(turf.getPricePerHour());
         response.setDescription(turf.getDescription());

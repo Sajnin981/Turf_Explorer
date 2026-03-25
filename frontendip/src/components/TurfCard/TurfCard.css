@@ -89,6 +89,19 @@
   white-space: nowrap;
 }
 
+.distance-pill {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 0.8rem;
+  font-weight: 600;
+  color: var(--primary-blue);
+  background: rgba(46, 204, 113, 0.12);
+  border-radius: 999px;
+  padding: 4px 12px;
+  margin-bottom: 12px;
+}
+
 .turf-meta {
   display: flex;
   justify-content: space-between;

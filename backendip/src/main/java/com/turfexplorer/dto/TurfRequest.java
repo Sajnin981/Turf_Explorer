@@ -24,4 +24,8 @@ public class TurfRequest {
     private String description;
     
     private String imageUrl;
+
+    // Optional coordinates captured while owners register a turf
+    private Double latitude;
+    private Double longitude;
 }

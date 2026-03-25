@@ -17,6 +17,8 @@ const AddTurf = () => {
   const [price, setPrice] = useState('');  // Price per hour
   const [description, setDescription] = useState('');
   const [imageUrl, setImageUrl] = useState('');
+  const [latitude, setLatitude] = useState('');
+  const [longitude, setLongitude] = useState('');
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
 
@@ -50,7 +52,9 @@ const AddTurf = () => {
         turfType: type,
         pricePerHour: parseInt(price),
         description,
-        imageUrl: imageUrl || null
+        imageUrl: imageUrl || null,
+        latitude: latitude ? parseFloat(latitude) : null,
+        longitude: longitude ? parseFloat(longitude) : null
       });
       alert('Turf submitted! Your turf is waiting for admin approval.');
       navigate('/my-turfs');
@@ -86,6 +90,28 @@ const AddTurf = () => {
     setImageUrl(event.target.value);
   }
 
+  function handleLatitudeChange(event) {
+    setLatitude(event.target.value);
+  }
+
+  function handleLongitudeChange(event) {
+    setLongitude(event.target.value);
+  }
+
+  function handleUseCurrentCoordinates() {
+    if (!navigator.geolocation) {
+      alert('Geolocation is not supported on this device. Please enter the coordinates manually.');
+      return;
+    }
+
+    navigator.geolocation.getCurrentPosition(function(position) {
+      setLatitude(position.coords.latitude.toFixed(6));
+      setLongitude(position.coords.longitude.toFixed(6));
+    }, function() {
+      alert('Unable to access your current location. Please try again or type the coordinates manually.');
+    });
+  }
+
   function handleCancel() {
     navigate(-1);  // Go back to previous page
   }
@@ -117,7 +143,7 @@ const AddTurf = () => {
 
           {/* Location */}
           <div className="form-group">
-            <label htmlFor="location">Location *</label>
+                  <label htmlFor="location">Location *</label>
             <input
               type="text"
               id="location"
@@ -126,6 +152,38 @@ const AddTurf = () => {
               placeholder="e.g., Nasirabad, Chittagong"
               required
             />
+          </div>
+
+          {/* Optional coordinates improve the new nearby-search feature */}
+          <div className="form-row">
+            <div className="form-group">
+              <label htmlFor="latitude">Latitude (optional)</label>
+              <input
+                type="number"
+                id="latitude"
+                step="0.000001"
+                value={latitude}
+                onChange={handleLatitudeChange}
+                placeholder="e.g., 22.3569"
+              />
+            </div>
+            <div className="form-group">
+              <label htmlFor="longitude">Longitude (optional)</label>
+              <input
+                type="number"
+                id="longitude"
+                step="0.000001"
+                value={longitude}
+                onChange={handleLongitudeChange}
+                placeholder="e.g., 91.7832"
+              />
+            </div>
+          </div>
+          <div className="coordinate-helper">
+            <button type="button" className="coords-btn" onClick={handleUseCurrentCoordinates}>
+              Use My Current Location
+            </button>
+            <small>Sharing accurate coordinates helps players discover your turf faster.</small>
           </div>
 
           {/* Turf Type */}

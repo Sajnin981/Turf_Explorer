@@ -172,8 +172,8 @@ const TurfDetails = () => {
             </div>
 
             <div className="info-item">
-              <span className="info-icon">$</span>
-              <span className="info-text price-text">${turf.price || turf.pricePerHour} per hour</span>
+              <span className="info-icon">Tk</span>
+              <span className="info-text price-text">Tk {turf.price || turf.pricePerHour} per hour</span>
             </div>
 
             <div className="info-item">
@@ -236,7 +236,11 @@ const TurfDetails = () => {
                         onClick={function() { handleSlotSelect(slot); }}
                       >
                         {slot.startTime} - {slot.endTime}
-                        {slot.price && <span style={{ display: 'block', fontSize: '0.85em' }}>${slot.price}</span>}
+                        {slot.price && (
+                          <span style={{ display: 'block', fontSize: '0.85em' }}>
+                            Tk {slot.price}
+                          </span>
+                        )}
                       </button>
                     );
                   }) : (
@@ -264,7 +268,7 @@ const TurfDetails = () => {
                 </div>
                 <div className="summary-item total">
                   <span>Total:</span>
-                  <span>${selectedSlot.price || turf.pricePerHour}</span>
+                  <span>Tk {selectedSlot.price || turf.pricePerHour}</span>
                 </div>
               </div>
             )}
