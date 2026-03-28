@@ -15,7 +15,7 @@ A modern, responsive React-based turf booking system for finding and booking foo
 - **React 18** - Modern UI framework
 - **React Router** - Client-side routing
 - **CSS3** - Modern styling with CSS variables, Grid, Flexbox
-- **Dummy Data** - Local data simulation for demonstration
+- **Axios** - API client for backend integration
 
 ## Setup Instructions
 
@@ -65,8 +65,6 @@ frontendip/
 │   │   ├── MyTurfs/        # User's turfs
 │   │   ├── MyBookings/     # User's bookings
 │   │   └── Profile/        # User profile
-│   ├── utils/
-│   │   └── dummyData.js    # Sample data
 │   ├── App.js              # Main app component
 │   ├── App.css             # Global styles
 │   └── index.js            # Entry point
@@ -119,15 +117,13 @@ frontendip/
 
 ## Notes
 
-- This project uses dummy data for demonstration purposes
-- No backend or database is required to run the app
-- All state is managed locally in React components
+- This frontend is integrated with the backend API under backendip
+- Configure backend URL from frontend service configuration if needed
+- Authentication state is stored in localStorage for session persistence
 
 ## Future Enhancements
 
-- Backend API integration
 - Real database for persistent storage
-- Payment gateway integration
 - Real-time availability updates
 - User profile and booking history
 - Map integration for turf locations

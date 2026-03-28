@@ -93,10 +93,6 @@ const AddTurf = () => {
     setDescription(event.target.value);
   }
 
-  function handleImageUrlChange(event) {
-    setImageUrl(event.target.value);
-  }
-
   function handleLatitudeChange(event) {
     setLatitude(event.target.value);
   }

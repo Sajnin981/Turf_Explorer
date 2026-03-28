@@ -41,10 +41,6 @@ public class TurfService {
         return responses;
     }
 
-    public List<TurfResponse> getAllApprovedTurfs(Double latitude, Double longitude) {
-        return getAllApprovedTurfs(latitude, longitude, null);
-    }
-
     public TurfResponse getTurfById(Long id) {
         Turf turf = turfRepository.findById(id)
                 .orElseThrow(() -> new ResourceNotFoundException("Turf not found with id: " + id));

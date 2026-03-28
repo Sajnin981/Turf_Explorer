@@ -67,26 +67,8 @@ public class OwnerController {
         return ResponseEntity.ok(ownerService.updateSlot(slotId, userId, request));
     }
 
-    @PutMapping("/timeslots/{slotId}")
-    public ResponseEntity<SlotResponse> updateTimeSlot(
-            @PathVariable Long slotId,
-            @Valid @RequestBody SlotRequest request,
-            Authentication authentication) {
-        Long userId = userDetailsService.getUserByEmail(authentication.getName()).getId();
-        return ResponseEntity.ok(ownerService.updateSlot(slotId, userId, request));
-    }
-
     @DeleteMapping("/slots/{slotId}")
     public ResponseEntity<MessageResponse> deleteSlot(
-            @PathVariable Long slotId,
-            Authentication authentication) {
-        Long userId = userDetailsService.getUserByEmail(authentication.getName()).getId();
-        ownerService.deleteSlot(slotId, userId);
-        return ResponseEntity.ok(new MessageResponse("Slot deleted successfully"));
-    }
-
-    @DeleteMapping("/timeslots/{slotId}")
-    public ResponseEntity<MessageResponse> deleteTimeSlot(
             @PathVariable Long slotId,
             Authentication authentication) {
         Long userId = userDetailsService.getUserByEmail(authentication.getName()).getId();

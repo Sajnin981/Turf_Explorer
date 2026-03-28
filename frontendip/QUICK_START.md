@@ -29,14 +29,12 @@ The app will automatically open in your browser at `http://localhost:3000`
 ### 2. **Browse Turfs** (`/turfs`)
    - View all available turfs
    - Filter by availability
-   - Sort by price or popularity
+   - Sort by nearest or price
    - Click any turf to view details
 
 ### 3. **Turf Details** (`/turf/:id`)
    - Detailed turf information
-   - Facilities list
    - Location and pricing
-   - Photo gallery
    - Book Now option
 
 ### 4. **Login/Register** (`/login`, `/register`)
@@ -59,62 +57,23 @@ The app will automatically open in your browser at `http://localhost:3000`
    - View your owned turfs
    - Edit turf details
    - View bookings for your turfs
-   - Approve or reject refund requests
+   - Manage slots and timing
 
 ### 8. **My Bookings** (`/my-bookings`)
    - View all your bookings
    - Pay for pending bookings
    - Cancel bookings
-   - Request refunds for cancelled bookings
 
 ### 9. **Profile** (`/profile`)
    - View and edit profile information
    - Update name, phone, and address
-  name: "New Turf",
-  // ... other properties
-  ownerEmail: "owner4@turf.com"
-}
-```
-
-2. **Add owner data to OwnerDashboard.js:**
-```javascript
-const turfsDatabase = {
-  'owner4@turf.com': {
-    id: 9,
-    name: 'New Turf',
-    // ... turf details
-  }
-};
-
-const bookingsDatabase = {
-  9: [
-    // bookings array
-  ]
-};
-```
-
-3. **Update demo accounts in OwnerLogin.js:**
-```jsx
-<p>📧 owner4@turf.com (New Turf)</p>
-```
-
-### Authentication Flow
-```
-User enters email → 
-Stored in localStorage → 
-OwnerDashboard reads email → 
-Filters turfs by ownerEmail → 
-Shows only owner's data
-```
-
-
 
 ## 🏗️ Tech Stack
 
 - **React 18** - Modern UI library
 - **React Router v6** - Client-side routing
 - **CSS3** - Custom styling
-- **Dummy Data** - Local data for demonstration
+- **Axios** - API calls to backend
 
 ## 📝 Development Tips
 
@@ -135,7 +94,7 @@ npm test
 src/
 ├── components/       # Reusable UI components
 ├── pages/           # Page-level components
-├── utils/           # Helper functions and data
+├── services/        # API service modules
 ├── App.js           # Main app component with routes
 ├── App.css          # Global styles
 └── index.js         # Entry point
@@ -151,9 +110,6 @@ src/
 2. **Add a new component:**
    - Create in `src/components/YourComponent/`
    - Export and import where needed
-
-3. **Modify dummy data:**
-   - Edit `src/utils/dummyData.js`
 
 ## 🎨 Customization
 
@@ -196,13 +152,10 @@ npm install
 ## 📚 Next Steps
 
 Ready for production? Consider:
-- [ ] Backend API integration
-- [ ] User authentication system
-- [ ] Database connection (MongoDB, PostgreSQL, etc.)
-- [ ] Payment gateway integration
+- [ ] Refresh-token based authentication
+- [ ] Better audit and activity logs
 - [ ] Real-time booking updates
 - [ ] Email/SMS notifications
-- [ ] Image upload functionality
 - [ ] Advanced search and filters
 - [ ] User reviews
 - [ ] Mobile app (React Native)

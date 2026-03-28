@@ -78,21 +78,6 @@
   font-size: 0.95rem;
 }
 
-.social-links {
-  display: flex;
-  gap: 20px;
-}
-
-.social-link {
-  font-size: 1.5rem;
-  transition: transform 0.3s ease;
-  display: inline-block;
-}
-
-.social-link:hover {
-  transform: translateY(-3px);
-}
-
 .footer-bottom {
   text-align: center;
   padding-top: 30px;
@@ -123,9 +108,5 @@
 
   .footer-links a:hover {
     transform: none;
-  }
-
-  .social-links {
-    justify-content: center;
   }
 }
