@@ -19,8 +19,9 @@ public class TurfController {
     @GetMapping
     public ResponseEntity<List<TurfResponse>> getAllTurfs(
             @RequestParam(value = "lat", required = false) Double latitude,
-            @RequestParam(value = "lng", required = false) Double longitude) {
-        return ResponseEntity.ok(turfService.getAllApprovedTurfs(latitude, longitude));
+            @RequestParam(value = "lng", required = false) Double longitude,
+            @RequestParam(value = "search", required = false) String search) {
+        return ResponseEntity.ok(turfService.getAllApprovedTurfs(latitude, longitude, search));
     }
 
     @GetMapping("/nearby")

@@ -8,7 +8,7 @@ import './Home.css';
 
 const Home = () => {
   const navigate = useNavigate();
-  const [searchLocation, setSearchLocation] = useState('');
+  const [searchName, setSearchName] = useState('');
 
   // Handle Get Started button click
   function handleGetStarted() {
@@ -21,14 +21,14 @@ const Home = () => {
     }
   }
 
-  function handleLocationSearch(event) {
+  function handleNameSearch(event) {
     event.preventDefault();
-    const query = searchLocation.trim();
+    const query = searchName.trim();
     if (!query) {
       navigate('/turfs');
       return;
     }
-    navigate(`/turfs?location=${encodeURIComponent(query)}`);
+    navigate(`/turfs?search=${encodeURIComponent(query)}`);
   }
 
   return (
@@ -43,14 +43,14 @@ const Home = () => {
             <p className="hero-subtitle">
               Find and book the best turfs with ease.
             </p>
-            <form className="hero-search" onSubmit={handleLocationSearch}>
+            <form className="hero-search" onSubmit={handleNameSearch}>
               <input
                 type="text"
                 className="hero-search-input"
-                placeholder="Enter a city, area, or address"
-                value={searchLocation}
-                onChange={function(event) { setSearchLocation(event.target.value); }}
-                aria-label="Search turfs by location"
+                placeholder="Search by turf name"
+                value={searchName}
+                onChange={function(event) { setSearchName(event.target.value); }}
+                aria-label="Search turfs by name"
               />
               <button type="submit" className="hero-search-button">
                 Search

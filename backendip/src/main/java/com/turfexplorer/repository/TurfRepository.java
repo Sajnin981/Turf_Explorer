@@ -10,6 +10,7 @@ import java.util.List;
 @Repository
 public interface TurfRepository extends JpaRepository<Turf, Long> {
     List<Turf> findByStatus(TurfStatus status);
+    List<Turf> findByStatusAndNameContainingIgnoreCase(TurfStatus status, String name);
     List<Turf> findByOwnerId(Long ownerId);
     List<Turf> findByOwnerIdAndStatus(Long ownerId, TurfStatus status);
     long countByStatus(TurfStatus status);

@@ -13,6 +13,7 @@ import org.springframework.stereotype.Service;
 
 import java.util.Comparator;
 import java.util.List;
+import java.util.Objects;
 import java.util.stream.Collectors;
 
 @Service
@@ -26,8 +27,10 @@ public class TurfService {
 
     @Autowired
     private DistanceService distanceService;
-    public List<TurfResponse> getAllApprovedTurfs(Double latitude, Double longitude) {
-        List<TurfResponse> responses = turfRepository.findByStatus(TurfStatus.APPROVED)
+
+    public List<TurfResponse> getAllApprovedTurfs(Double latitude, Double longitude, String search) {
+        List<Turf> turfs = getApprovedTurfsByName(search);
+        List<TurfResponse> responses = turfs
                 .stream()
                 .map(turf -> mapToResponse(turf, latitude, longitude))
                 .collect(Collectors.toList());
@@ -36,6 +39,10 @@ public class TurfService {
             responses.sort(Comparator.comparing(response -> response.getDistanceKm() == null ? Double.MAX_VALUE : response.getDistanceKm()));
         }
         return responses;
+    }
+
+    public List<TurfResponse> getAllApprovedTurfs(Double latitude, Double longitude) {
+        return getAllApprovedTurfs(latitude, longitude, null);
     }
 
     public TurfResponse getTurfById(Long id) {
@@ -50,7 +57,7 @@ public class TurfService {
     public List<TurfResponse> getNearbyTurfs(Double latitude, Double longitude, int limit) {
         if (latitude == null || longitude == null) {
             // Fallback to standard listing when coordinates are missing
-            return getAllApprovedTurfs(null, null);
+            return getAllApprovedTurfs(null, null, null);
         }
 
         int cappedLimit = Math.max(1, Math.min(limit, 50));
@@ -66,7 +73,7 @@ public class TurfService {
 
         if (distanceAware.isEmpty()) {
             // Preserve legacy behavior instead of returning an empty list when coordinates are missing in DB
-            return getAllApprovedTurfs(null, null);
+            return getAllApprovedTurfs(null, null, null);
         }
 
         return distanceAware.stream()
@@ -82,6 +89,18 @@ if (!turfRepository.existsById(turfId)) {
         return slotRepository.findByTurfId(turfId)
                 .stream()
                 .map(this::mapSlotToResponse)
+                .collect(Collectors.toList());
+    }
+
+    private List<Turf> getApprovedTurfsByName(String search) {
+        if (search == null || search.trim().isEmpty()) {
+            return turfRepository.findByStatus(TurfStatus.APPROVED);
+        }
+
+        String normalizedSearch = search.trim();
+        return turfRepository.findByStatusAndNameContainingIgnoreCase(TurfStatus.APPROVED, normalizedSearch)
+                .stream()
+                .filter(Objects::nonNull)
                 .collect(Collectors.toList());
     }
 

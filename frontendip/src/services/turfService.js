@@ -16,6 +16,9 @@ function normalizeTurf(t) {
 
 export async function getAllTurfs(params = {}) {
   const searchParams = new URLSearchParams();
+  if (params.search) {
+    searchParams.append('search', params.search);
+  }
   if (params.lat !== undefined && params.lat !== null) {
     searchParams.append('lat', params.lat);
   }
