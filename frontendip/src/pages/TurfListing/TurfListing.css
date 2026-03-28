@@ -23,38 +23,6 @@
   margin: 0 auto;
 }
 
-/* Location Search Box */
-.location-search-box {
-  padding: 20px 0;
-  margin-bottom: 10px;
-}
-
-.location-search-input {
-  width: 100%;
-  padding: 14px 20px;
-  border: 2px solid #ddd;
-  border-radius: 12px;
-  font-size: 1rem;
-  font-weight: 500;
-  color: var(--text-dark);
-  background: white;
-  transition: all 0.3s ease;
-}
-
-.location-search-input::placeholder {
-  color: #95a5a6;
-}
-
-.location-search-input:hover {
-  border-color: var(--primary-green);
-}
-
-.location-search-input:focus {
-  outline: none;
-  border-color: var(--primary-green);
-  box-shadow: 0 0 0 3px rgba(46, 204, 113, 0.1);
-}
-
 /* Nearby discovery controls */
 .proximity-tools {
   display: flex;
@@ -196,23 +164,6 @@
   border-color: var(--primary-green);
 }
 
-.radius-filter {
-  display: flex;
-  align-items: center;
-  gap: 12px;
-}
-
-.radius-select {
-  padding: 10px 15px;
-  border: 2px solid #ddd;
-  border-radius: 12px;
-  font-size: 14px;
-  font-weight: 500;
-  color: var(--text-dark);
-  background: white;
-  cursor: pointer;
-}
-
 /* Turfs Grid */
 .turfs-grid {
   display: grid;
@@ -317,8 +268,4 @@
     font-size: 1rem;
   }
 
-  .radius-filter {
-    width: 100%;
-    justify-content: space-between;
-  }
 }

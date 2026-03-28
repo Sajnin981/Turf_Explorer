@@ -3,22 +3,16 @@
 // Features: Search by location, filter by availability, sort by different criteria
 
 import React, { useState, useEffect } from 'react';
-import { useSearchParams } from 'react-router-dom';
 import TurfCard from '../../components/TurfCard/TurfCard';
 import { getAllTurfs, getNearbyTurfs } from '../../services/turfService';
 import './TurfListing.css';
 
 const TurfListing = () => {
-  // Get URL parameters (for location search from home page)
-  const [searchParams] = useSearchParams();
-  
   // State variables
   const [allTurfs, setAllTurfs] = useState([]);
   const [sortBy, setSortBy] = useState('popular');
   const [showAvailableOnly, setShowAvailableOnly] = useState(false);
-  const [locationSearch, setLocationSearch] = useState(searchParams.get('location') || '');
   const [manualLocationQuery, setManualLocationQuery] = useState('');
-  const [radiusFilter, setRadiusFilter] = useState('all');
   const [distanceMode, setDistanceMode] = useState(false);
   const [locationStatus, setLocationStatus] = useState('');
   const [loading, setLoading] = useState(false);
@@ -40,14 +34,9 @@ const TurfListing = () => {
       }
     }
     fetchTurfs();
+  }, []);
 
-    const loc = searchParams.get('location');
-    if (loc) {
-      setLocationSearch(loc);
-    }
-  }, [searchParams]);
-
-  function handleLoadedTurfs(turfs, options = {}) {
+  function handleLoadedTurfs(turfs) {
     setAllTurfs(turfs);
     const hasDistance = turfs.some(function(t) { return typeof t.distanceKm === 'number'; });
     setDistanceMode(hasDistance);
@@ -62,9 +51,6 @@ const TurfListing = () => {
       return prev;
     });
 
-    if (options.resetRadius !== false) {
-      setRadiusFilter('all');
-    }
   }
 
   // Step 1: Filter turfs based on user's selections
@@ -76,24 +62,6 @@ const TurfListing = () => {
     // Check availability filter
     if (showAvailableOnly && !turf.available) {
       shouldInclude = false;  // User wants available only, this one isn't
-    }
-    
-    // Check location search (string filter)
-    if (locationSearch.trim()) {
-      const searchLower = locationSearch.toLowerCase();
-      const turfLocationLower = turf.location.toLowerCase();
-      const locationMatches = turfLocationLower.includes(searchLower);
-      
-      if (!locationMatches) {
-        shouldInclude = false;  // Location doesn't match search
-      }
-    }
-
-    if (distanceMode && radiusFilter !== 'all') {
-      const maxDistance = parseFloat(radiusFilter);
-      if (typeof turf.distanceKm !== 'number' || turf.distanceKm > maxDistance) {
-        shouldInclude = false;
-      }
     }
     
     // Add to filtered list if it passed all checks
@@ -140,11 +108,6 @@ const TurfListing = () => {
   }
 
   // Handler functions for user interactions
-  function handleLocationSearchChange(event) {
-    // When user types in location search box, update the search text
-    setLocationSearch(event.target.value);
-  }
-
   function handleAvailabilityFilterChange(event) {
     // When user checks/unchecks "Show only available", update the filter
     setShowAvailableOnly(event.target.checked);
@@ -153,10 +116,6 @@ const TurfListing = () => {
   function handleSortChange(event) {
     // When user selects a different sort option, update sort preference
     setSortBy(event.target.value);
-  }
-
-  function handleRadiusChange(event) {
-    setRadiusFilter(event.target.value);
   }
 
   async function loadNearbyByCoords(lat, lng, successMessage, options = {}) {
@@ -306,17 +265,6 @@ const TurfListing = () => {
           <p className="location-hint">{locationStatus}</p>
         )}
 
-        {/* Location Search */}
-        <div className="location-search-box">
-          <input 
-            type="text"
-            className="location-search-input"
-            placeholder="Filter results by neighborhood or landmark"
-            value={locationSearch}
-            onChange={handleLocationSearchChange}
-          />
-        </div>
-
         {/* Filter and Sort Controls */}
         <div className="controls">
           <div className="filter-section">
@@ -343,18 +291,6 @@ const TurfListing = () => {
               <option value="priceHigh">Price: High to Low</option>
             </select>
           </div>
-
-          {distanceMode && (
-            <div className="radius-filter">
-              <label>Radius:</label>
-              <select className="radius-select" value={radiusFilter} onChange={handleRadiusChange}>
-                <option value="all">Any distance</option>
-                <option value="5">Within 5 km</option>
-                <option value="10">Within 10 km</option>
-                <option value="20">Within 20 km</option>
-              </select>
-            </div>
-          )}
         </div>
 
         {/* Display turfs */}
@@ -368,11 +304,7 @@ const TurfListing = () => {
               <div className="no-results-icon">🔍</div>
               <h2>No Turfs Found</h2>
               <p>
-                {distanceMode && radiusFilter !== 'all' 
-                  ? 'No turfs within the selected radius. Try expanding the distance filter.'
-                  : locationSearch.trim() 
-                  ? `No turfs found in "${locationSearch}". Try a different location.` 
-                  : showAvailableOnly 
+                {showAvailableOnly 
                   ? 'No available turfs at the moment.' 
                   : 'No turfs found. Please check back later!'}
               </p>

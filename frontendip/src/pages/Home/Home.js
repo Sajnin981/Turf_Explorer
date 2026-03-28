@@ -2,29 +2,12 @@
 // Purpose: Landing page of the application
 // Features: Hero section with search, how it works section, top turfs display
 
-import React, { useState } from 'react';
-import { Link, useNavigate } from 'react-router-dom';
+import React from 'react';
+import { useNavigate } from 'react-router-dom';
 import './Home.css';
 
 const Home = () => {
   const navigate = useNavigate();
-  const [searchLocation, setSearchLocation] = useState('');  // Location search input
-
-  // Function to handle location search
-  function handleLocationSearch() {
-    if (searchLocation.trim()) {
-      navigate(`/turfs?location=${encodeURIComponent(searchLocation.trim())}`);
-    } else {
-      navigate('/turfs');
-    }
-  }
-
-  // Handle Enter key press in search box
-  function handleKeyPress(event) {
-    if (event.key === 'Enter') {
-      handleLocationSearch();
-    }
-  }
 
   // Handle Get Started button click
   function handleGetStarted() {
@@ -37,11 +20,6 @@ const Home = () => {
     }
   }
 
-  // Handle search location input change
-  function handleSearchLocationChange(event) {
-    setSearchLocation(event.target.value);
-  }
-
   return (
     <div className="home">
       <section className="hero">
@@ -52,23 +30,8 @@ const Home = () => {
               Play Football or Cricket Anytime, Book the Nearest Turf in Seconds
             </h1>
             <p className="hero-subtitle">
-              Find and book the best turfs in Chittagong with ease.
+              Find and book the best turfs with ease.
             </p>
-            
-            {/* Location Search */}
-            <div className="location-search">
-              <input 
-                type="text"
-                className="location-input"
-                placeholder="📍 Enter location (e.g., Agrabad, Khulshi, CDA Avenue...)"
-                value={searchLocation}
-                onChange={handleSearchLocationChange}
-                onKeyPress={handleKeyPress}
-              />
-              <button onClick={handleLocationSearch} className="btn btn-primary hero-btn">
-                🔍 Search Turfs
-              </button>
-            </div>
           </div>
         </div>
       </section>
