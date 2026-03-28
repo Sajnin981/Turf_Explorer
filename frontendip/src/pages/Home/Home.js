@@ -2,12 +2,13 @@
 // Purpose: Landing page of the application
 // Features: Hero section with search, how it works section, top turfs display
 
-import React from 'react';
+import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import './Home.css';
 
 const Home = () => {
   const navigate = useNavigate();
+  const [searchLocation, setSearchLocation] = useState('');
 
   // Handle Get Started button click
   function handleGetStarted() {
@@ -18,6 +19,16 @@ const Home = () => {
     } else {
       navigate('/login');
     }
+  }
+
+  function handleLocationSearch(event) {
+    event.preventDefault();
+    const query = searchLocation.trim();
+    if (!query) {
+      navigate('/turfs');
+      return;
+    }
+    navigate(`/turfs?location=${encodeURIComponent(query)}`);
   }
 
   return (
@@ -32,6 +43,19 @@ const Home = () => {
             <p className="hero-subtitle">
               Find and book the best turfs with ease.
             </p>
+            <form className="hero-search" onSubmit={handleLocationSearch}>
+              <input
+                type="text"
+                className="hero-search-input"
+                placeholder="Enter a city, area, or address"
+                value={searchLocation}
+                onChange={function(event) { setSearchLocation(event.target.value); }}
+                aria-label="Search turfs by location"
+              />
+              <button type="submit" className="hero-search-button">
+                Search
+              </button>
+            </form>
           </div>
         </div>
       </section>

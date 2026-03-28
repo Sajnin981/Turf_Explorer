@@ -3,11 +3,14 @@
 // Features: Search by location, filter by availability, sort by different criteria
 
 import React, { useState, useEffect } from 'react';
+import { useSearchParams } from 'react-router-dom';
 import TurfCard from '../../components/TurfCard/TurfCard';
 import { getAllTurfs, getNearbyTurfs } from '../../services/turfService';
 import './TurfListing.css';
 
 const TurfListing = () => {
+  const [searchParams] = useSearchParams();
+
   // State variables
   const [allTurfs, setAllTurfs] = useState([]);
   const [sortBy, setSortBy] = useState('popular');
@@ -35,6 +38,16 @@ const TurfListing = () => {
     }
     fetchTurfs();
   }, []);
+
+  useEffect(function() {
+    const locationParam = searchParams.get('location');
+    if (!locationParam) {
+      return;
+    }
+    setManualLocationQuery(locationParam);
+    handleManualLocationSearch(locationParam);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [searchParams]);
 
   function handleLoadedTurfs(turfs) {
     setAllTurfs(turfs);
@@ -180,8 +193,8 @@ const TurfListing = () => {
     };
   }
 
-  async function handleManualLocationSearch() {
-    const query = manualLocationQuery.trim();
+  async function handleManualLocationSearch(overrideQuery) {
+    const query = (overrideQuery ?? manualLocationQuery).trim();
     if (!query) {
       setLocationStatus('Please enter a city, neighborhood, or address to search.');
       return;
