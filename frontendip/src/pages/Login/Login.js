@@ -30,6 +30,14 @@ const Login = () => {
       const data = await login(email, password);
       const role = data.role.toLowerCase();
 
+      if (loginMode === 'user' && role === 'admin') {
+        setError('Please use Admin Login for admin accounts.');
+        // Clean up stored data since admin authenticated via wrong tab
+        import('../../services/authService').then(m => m.logout());
+        setLoading(false);
+        return;
+      }
+
       if (loginMode === 'admin' && role !== 'admin') {
         setError('Access denied. This account does not have admin privileges.');
         // Clean up stored data since the user logged in but isn't admin

@@ -15,7 +15,7 @@ import MyBookings from './pages/MyBookings/MyBookings';
 import PaymentSuccess from './pages/PaymentSuccess/PaymentSuccess';
 import PaymentFail from './pages/PaymentFail/PaymentFail';
 import PaymentCancel from './pages/PaymentCancel/PaymentCancel';
-import { isLoggedIn, isAdmin } from './services/authService';
+import { isLoggedIn, isAdmin, isOwner } from './services/authService';
 import './App.css';
 
 // Redirects to /login if not authenticated
@@ -26,6 +26,14 @@ function PrivateRoute({ children }) {
 // Redirects to /login if not admin
 function AdminRoute({ children }) {
   return isAdmin() ? children : <Navigate to="/login" replace />;
+}
+
+// Redirects admins/owners away from user-only booking page
+function UserBookingRoute({ children }) {
+  if (!isLoggedIn()) {
+    return <Navigate to="/login" replace />;
+  }
+  return !isAdmin() && !isOwner() ? children : <Navigate to="/turfs" replace />;
 }
 
 function App() {
@@ -44,7 +52,7 @@ function App() {
             <Route path="/add-turf" element={<PrivateRoute><AddTurf /></PrivateRoute>} />
             <Route path="/my-turfs" element={<PrivateRoute><MyTurfs /></PrivateRoute>} />
             <Route path="/profile" element={<PrivateRoute><Profile /></PrivateRoute>} />
-            <Route path="/my-bookings" element={<PrivateRoute><MyBookings /></PrivateRoute>} />
+            <Route path="/my-bookings" element={<UserBookingRoute><MyBookings /></UserBookingRoute>} />
             <Route path="/payment/success" element={<PaymentSuccess />} />
             <Route path="/payment/fail" element={<PaymentFail />} />
             <Route path="/payment/cancel" element={<PaymentCancel />} />
