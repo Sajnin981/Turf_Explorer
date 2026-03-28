@@ -194,6 +194,16 @@ public class PaymentService {
         payment.setTurfId(request.getTurfId());
         payment.setSlotId(request.getSlotId());
         payment.setBookingDate(request.getBookingDate());
+        bookingRepository.findFirstByUserIdAndSlotIdAndBookingDateAndStatusInOrderByCreatedAtDesc(
+                userId,
+                request.getSlotId(),
+                request.getBookingDate(),
+                Arrays.asList(BookingStatus.PENDING, BookingStatus.CONFIRMED)
+        ).ifPresent(existingBooking -> {
+            if (existingBooking.getTurfId().equals(request.getTurfId())) {
+                payment.setBookingId(existingBooking.getId());
+            }
+        });
         payment.setAmount(paidAmount);
         payment.setTotalAmount(totalAmount);
         payment.setPaidAmount(paidAmount);

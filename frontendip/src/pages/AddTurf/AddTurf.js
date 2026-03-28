@@ -45,6 +45,13 @@ const AddTurf = () => {
     event.preventDefault();
     setLoading(true);
     setError('');
+
+    if (!latitude || !longitude) {
+      setError('Latitude and longitude are required.');
+      setLoading(false);
+      return;
+    }
+
     try {
       await submitTurf({
         name,
@@ -53,8 +60,8 @@ const AddTurf = () => {
         pricePerHour: parseInt(price),
         description,
         imageUrl: imageUrl || null,
-        latitude: latitude ? parseFloat(latitude) : null,
-        longitude: longitude ? parseFloat(longitude) : null
+        latitude: parseFloat(latitude),
+        longitude: parseFloat(longitude)
       });
       alert('Turf submitted! Your turf is waiting for admin approval.');
       navigate('/my-turfs');
@@ -154,10 +161,10 @@ const AddTurf = () => {
             />
           </div>
 
-          {/* Optional coordinates improve the new nearby-search feature */}
+          {/* Coordinates are required for nearby-search and sorting */}
           <div className="form-row">
             <div className="form-group">
-              <label htmlFor="latitude">Latitude (optional)</label>
+              <label htmlFor="latitude">Latitude *</label>
               <input
                 type="number"
                 id="latitude"
@@ -165,10 +172,11 @@ const AddTurf = () => {
                 value={latitude}
                 onChange={handleLatitudeChange}
                 placeholder="e.g., 22.3569"
+                required
               />
             </div>
             <div className="form-group">
-              <label htmlFor="longitude">Longitude (optional)</label>
+              <label htmlFor="longitude">Longitude *</label>
               <input
                 type="number"
                 id="longitude"
@@ -176,6 +184,7 @@ const AddTurf = () => {
                 value={longitude}
                 onChange={handleLongitudeChange}
                 placeholder="e.g., 91.7832"
+                required
               />
             </div>
           </div>

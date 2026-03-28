@@ -212,9 +212,6 @@ const TurfListing = () => {
 
       <div className="container">
         <div className="proximity-tools">
-          <button className="nearby-btn" onClick={handleUseCurrentLocation}>
-            Use My Location
-          </button>
           <div className="manual-location-form">
             <input
               type="text"

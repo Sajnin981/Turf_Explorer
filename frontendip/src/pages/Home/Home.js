@@ -82,7 +82,7 @@ const Home = () => {
               <div className="step-number">Step 2</div>
               <h3 className="step-title">Compare Options</h3>
               <p className="step-description">
-                View detailed information about each turf including price, facilities, and availability.
+                View detailed information about each turf including price and availability.
               </p>
             </div>
 
@@ -113,9 +113,9 @@ const Home = () => {
               <p>Book your slot in just a few clicks</p>
             </div>
             <div className="feature-card">
-              <span className="feature-icon">⭐</span>
-              <h3>Top Rated</h3>
-              <p>All turfs are verified and highly rated</p>
+              <span className="feature-icon">📍</span>
+              <h3>Nearest Turfs</h3>
+              <p>Discover nearby turfs based on your current location</p>
             </div>
           </div>
         </div>

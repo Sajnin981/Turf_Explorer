@@ -21,8 +21,8 @@ const MyBookings = () => {
       navigate('/login');
       return;
     }
-    if (userRole === 'admin') {
-      navigate('/admin');
+    if (userRole === 'admin' || userRole === 'owner') {
+      navigate('/turfs');
       return;
     }
     loadUserBookings();

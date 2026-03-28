@@ -25,7 +25,9 @@ public class TurfRequest {
     
     private String imageUrl;
 
-    // Optional coordinates captured while owners register a turf
+    @NotNull(message = "Latitude is required")
     private Double latitude;
+
+    @NotNull(message = "Longitude is required")
     private Double longitude;
 }

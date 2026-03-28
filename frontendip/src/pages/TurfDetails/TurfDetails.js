@@ -20,6 +20,8 @@ const TurfDetails = () => {
   const [loading, setLoading] = useState(true);
   const [bookingLoading, setBookingLoading] = useState(false);
   const [error, setError] = useState('');
+  const currentRole = getRole();
+  const isBookingRestrictedRole = currentRole === 'admin' || currentRole === 'owner';
 
   useEffect(function() {
     async function fetchData() {
@@ -48,8 +50,8 @@ const TurfDetails = () => {
       navigate('/login');
       return;
     }
-    if (getRole() === 'admin') {
-      alert('Admins cannot book turfs.');
+    if (isBookingRestrictedRole) {
+      alert('Admins and owners cannot book turfs.');
       return;
     }
     if (!selectedDate) {
@@ -186,102 +188,90 @@ const TurfDetails = () => {
               <h3>About this Turf</h3>
               <p>{turf.description}</p>
             </div>
-
-            <div className="features">
-              <h3>Facilities</h3>
-              <div className="features-grid">
-                {(turf.features || turf.facilities || []).map(function(feature, index) {
-                  return (
-                  <div key={index} className="feature-item">
-                    <span className="feature-icon">{"\u2713"}</span>
-                    <span>{feature}</span>
-                  </div>
-                  );
-                })}
-              </div>
-            </div>
           </div>
         </div>
 
         {/* Booking Section with Date and Time Selection */}
-        <div className="booking-section">
-          <h2 className="booking-title">Book Your Slot</h2>
-          
-          <div className="booking-form">
-            {/* Date Selection */}
-            <div className="form-group">
-              <label htmlFor="date-picker">Select Date</label>
-              <input 
-                type="date" 
-                id="date-picker"
-                min={today}
-                value={selectedDate}
-                onChange={handleDateChange}
-                className="date-input"
-              />
-            </div>
+        {!isBookingRestrictedRole && (
+          <div className="booking-section">
+            <h2 className="booking-title">Book Your Slot</h2>
 
-            {/* Time Slot Selection */}
-            {selectedDate && (
+            <div className="booking-form">
+              {/* Date Selection */}
               <div className="form-group">
-                <label>Select Time Slot</label>
-                <div className="slots-grid">
-                  {slots.length > 0 ? slots.map(function(slot) {
-                    const isSelected = selectedSlot && selectedSlot.id === slot.id;
-                    return (
-                      <button
-                        key={slot.id}
-                        className={`slot-btn ${isSelected ? 'selected' : ''}`}
-                        onClick={function() { handleSlotSelect(slot); }}
-                      >
-                        {slot.startTime} - {slot.endTime}
-                        {slot.price && (
-                          <span style={{ display: 'block', fontSize: '0.85em' }}>
-                            Tk {slot.price}
-                          </span>
-                        )}
-                      </button>
-                    );
-                  }) : (
-                    <p style={{ color: '#999' }}>No available slots for this turf.</p>
-                  )}
-                </div>
+                <label htmlFor="date-picker">Select Date</label>
+                <input
+                  type="date"
+                  id="date-picker"
+                  min={today}
+                  value={selectedDate}
+                  onChange={handleDateChange}
+                  className="date-input"
+                />
               </div>
-            )}
 
-            {/* Booking Summary */}
-            {selectedDate && selectedSlot && (
-              <div className="booking-summary">
-                <h3>Booking Summary</h3>
-                <div className="summary-item">
-                  <span>Turf:</span>
-                  <span>{turf.name}</span>
+              {/* Time Slot Selection */}
+              {selectedDate && (
+                <div className="form-group">
+                  <label>Select Time Slot</label>
+                  <div className="slots-grid">
+                    {slots.length > 0 ? slots.map(function(slot) {
+                      const isSelected = selectedSlot && selectedSlot.id === slot.id;
+                      return (
+                        <button
+                          key={slot.id}
+                          className={`slot-btn ${isSelected ? 'selected' : ''}`}
+                          onClick={function() { handleSlotSelect(slot); }}
+                        >
+                          {slot.startTime} - {slot.endTime}
+                          {slot.price && (
+                            <span style={{ display: 'block', fontSize: '0.85em' }}>
+                              Tk {slot.price}
+                            </span>
+                          )}
+                        </button>
+                      );
+                    }) : (
+                      <p style={{ color: '#999' }}>No available slots for this turf.</p>
+                    )}
+                  </div>
                 </div>
-                <div className="summary-item">
-                  <span>Date:</span>
-                  <span>{selectedDate}</span>
-                </div>
-                <div className="summary-item">
-                  <span>Time:</span>
-                  <span>{selectedSlot.startTime} - {selectedSlot.endTime}</span>
-                </div>
-                <div className="summary-item total">
-                  <span>Total:</span>
-                  <span>Tk {selectedSlot.price || turf.pricePerHour}</span>
-                </div>
-              </div>
-            )}
+              )}
 
-            {/* Book Button */}
-            <button 
-              className="btn btn-primary book-btn"
-              onClick={handleBooking}
-              disabled={!turf.available || !selectedDate || !selectedSlot || bookingLoading}
-            >
-              {bookingLoading ? 'Booking...' : !turf.available ? 'Currently Unavailable' : 'Confirm Booking'}
-            </button>
+              {/* Booking Summary */}
+              {selectedDate && selectedSlot && (
+                <div className="booking-summary">
+                  <h3>Booking Summary</h3>
+                  <div className="summary-item">
+                    <span>Turf:</span>
+                    <span>{turf.name}</span>
+                  </div>
+                  <div className="summary-item">
+                    <span>Date:</span>
+                    <span>{selectedDate}</span>
+                  </div>
+                  <div className="summary-item">
+                    <span>Time:</span>
+                    <span>{selectedSlot.startTime} - {selectedSlot.endTime}</span>
+                  </div>
+                  <div className="summary-item total">
+                    <span>Total:</span>
+                    <span>Tk {selectedSlot.price || turf.pricePerHour}</span>
+                  </div>
+                </div>
+              )}
+
+              {/* Book Button */}
+              <button
+                className="btn btn-primary book-btn"
+                onClick={handleBooking}
+                disabled={!turf.available || !selectedDate || !selectedSlot || bookingLoading}
+              >
+                {bookingLoading ? 'Booking...' : !turf.available ? 'Currently Unavailable' : 'Confirm Booking'}
+              </button>
+            </div>
           </div>
-        </div>
+        )}
       </div>
     </div>
   );
