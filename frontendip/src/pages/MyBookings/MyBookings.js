@@ -14,6 +14,48 @@ const MyBookings = () => {
   const [loading, setLoading] = useState(true);
   const [payingBookingId, setPayingBookingId] = useState(null);
 
+  function getErrorMessage(err, fallback) {
+    if (err && err.response && err.response.data && err.response.data.message) {
+      return err.response.data.message;
+    }
+    return fallback;
+  }
+
+  function getStatusLower(status) {
+    if (status) {
+      return status.toLowerCase();
+    }
+    return 'pending';
+  }
+
+  function formatStatusText(status) {
+    if (!status) {
+      return 'Pending';
+    }
+    return status.charAt(0) + status.slice(1).toLowerCase();
+  }
+
+  function shouldShowPayNowButton(booking) {
+    const paymentStatus = booking.paymentStatus;
+    const isAlreadyPaid = paymentStatus === 'SUCCESS' || paymentStatus === 'PARTIAL' || paymentStatus === 'FULL';
+    const isCancelled = booking.status === 'CANCELLED';
+
+    if (isAlreadyPaid) {
+      return false;
+    }
+    if (isCancelled) {
+      return false;
+    }
+    return true;
+  }
+
+  function getPayButtonText(bookingId) {
+    if (payingBookingId === bookingId) {
+      return 'Redirecting...';
+    }
+    return 'Pay 50% to Confirm';
+  }
+
   useEffect(function() {
     const userRole = localStorage.getItem('userRole');
     if (!localStorage.getItem('isLoggedIn')) {
@@ -47,7 +89,7 @@ const MyBookings = () => {
       alert('Booking cancelled successfully!');
       loadUserBookings();
     } catch (err) {
-      alert(err.response?.data?.message || 'Failed to cancel booking.');
+      alert(getErrorMessage(err, 'Failed to cancel booking.'));
     }
   }
 
@@ -65,7 +107,7 @@ const MyBookings = () => {
       }
       window.location.href = payment.gatewayPageURL;
     } catch (err) {
-      alert(err.response?.data?.message || 'Failed to start payment. Please try again.');
+      alert(getErrorMessage(err, 'Failed to start payment. Please try again.'));
     } finally {
       setPayingBookingId(null);
     }
@@ -95,7 +137,8 @@ const MyBookings = () => {
         {/* Show bookings list */}
         <div className="bookings-list">
           {bookings.map(function(booking) {
-            const statusLower = booking.status ? booking.status.toLowerCase() : 'pending';
+            const statusLower = getStatusLower(booking.status);
+            const shouldShowPayNow = shouldShowPayNowButton(booking);
             return (
             <div key={booking.id} className={`booking-card ${statusLower}`}>
               {/* Status Badge */}
@@ -144,7 +187,7 @@ const MyBookings = () => {
                     <span className="detail-icon">📋</span>
                     <span className="detail-label">Status:</span>
                     <span className={`detail-value status-${statusLower}`}>
-                      {booking.status ? booking.status.charAt(0) + booking.status.slice(1).toLowerCase() : 'Pending'}
+                      {formatStatusText(booking.status)}
                     </span>
                   </div>
 
@@ -152,7 +195,7 @@ const MyBookings = () => {
                     <span className="detail-icon">💳</span>
                     <span className="detail-label">Payment:</span>
                     <span className="detail-value">
-                      {booking.paymentStatus ? booking.paymentStatus.charAt(0) + booking.paymentStatus.slice(1).toLowerCase() : 'Pending'}
+                      {formatStatusText(booking.paymentStatus)}
                     </span>
                   </div>
 
@@ -191,13 +234,13 @@ const MyBookings = () => {
                   >
                     View Turf
                   </button>
-                  {booking.paymentStatus !== 'SUCCESS' && booking.paymentStatus !== 'PARTIAL' && booking.paymentStatus !== 'FULL' && booking.status !== 'CANCELLED' && (
+                  {shouldShowPayNow && (
                     <button
                       onClick={function() { handlePayNow(booking); }}
                       className="btn btn-primary"
                       disabled={payingBookingId === booking.id}
                     >
-                      {payingBookingId === booking.id ? 'Redirecting...' : 'Pay 50% to Confirm'}
+                      {getPayButtonText(booking.id)}
                     </button>
                   )}
                   <button

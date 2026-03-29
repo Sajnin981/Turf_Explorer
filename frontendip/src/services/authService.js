@@ -48,11 +48,18 @@ export function logout() {
 
 export function getCurrentUser() {
   const user = localStorage.getItem('user');
-  return user ? JSON.parse(user) : null;
+  if (user) {
+    return JSON.parse(user);
+  }
+  return null;
 }
 
 export function isLoggedIn() {
-  return !!localStorage.getItem('token');
+  const token = localStorage.getItem('token');
+  if (token) {
+    return true;
+  }
+  return false;
 }
 
 export function getRole() {

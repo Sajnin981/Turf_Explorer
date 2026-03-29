@@ -19,20 +19,22 @@ function ChatBot({ onClose }) {
   ];
 
   // Scrolls to the bottom of the chat automatically
-  const scrollToBottom = () => {
-    chatEndRef.current?.scrollIntoView({ behavior: "smooth" });
-  };
+  function scrollToBottom() {
+    if (chatEndRef.current) {
+      chatEndRef.current.scrollIntoView({ behavior: "smooth" });
+    }
+  }
 
-  useEffect(() => {
+  useEffect(function () {
     scrollToBottom();
   }, [chat]);
 
-  const getCurrentLocation = () => {
+  function getCurrentLocation() {
     if (locationFetched) {
       return Promise.resolve(location);
     }
 
-    return new Promise((resolve) => {
+    return new Promise(function (resolve) {
       if (!navigator.geolocation) {
         setLocationFetched(true);
         resolve(null);
@@ -40,7 +42,7 @@ function ChatBot({ onClose }) {
       }
 
       navigator.geolocation.getCurrentPosition(
-        (position) => {
+        function (position) {
           const userLocation = {
             latitude: position.coords.latitude,
             longitude: position.coords.longitude,
@@ -49,7 +51,7 @@ function ChatBot({ onClose }) {
           setLocationFetched(true);
           resolve(userLocation);
         },
-        () => {
+        function () {
           // Permission denied or unavailable; continue chat without location.
           setLocationFetched(true);
           resolve(null);
@@ -60,14 +62,32 @@ function ChatBot({ onClose }) {
         }
       );
     });
-  };
+  }
 
-  const sendMessage = async (msgText) => {
-    const textToSend = typeof msgText === "string" ? msgText : message;
-    if (!textToSend.trim()) return;
+  function updateLastBotMessage(newText) {
+    setChat(function (prev) {
+      const newChat = [...prev];
+      if (newChat.length > 0) {
+        newChat[newChat.length - 1].bot = newText;
+      }
+      return newChat;
+    });
+  }
+
+  async function sendMessage(msgText) {
+    let textToSend = message;
+    if (typeof msgText === "string") {
+      textToSend = msgText;
+    }
+
+    if (!textToSend.trim()) {
+      return;
+    }
 
     // Optimistically add user message and temporary bot "..." message
-    setChat((prev) => [...prev, { user: textToSend, bot: "..." }]);
+    setChat(function (prev) {
+      return [...prev, { user: textToSend, bot: "..." }];
+    });
     setMessage(""); // Clear input
 
     try {
@@ -76,7 +96,7 @@ function ChatBot({ onClose }) {
         message: textToSend,
       };
 
-      if (userLocation?.latitude != null && userLocation?.longitude != null) {
+      if (userLocation && userLocation.latitude != null && userLocation.longitude != null) {
         payload.latitude = userLocation.latitude;
         payload.longitude = userLocation.longitude;
       }
@@ -93,30 +113,40 @@ function ChatBot({ onClose }) {
       const reply = data.reply || "Sorry, no response from server.";
 
       // Replace the temporary "..." with actual server reply
-      setChat((prev) => {
-        const newChat = [...prev];
-        newChat[newChat.length - 1].bot = reply;
-        return newChat;
-      });
+      updateLastBotMessage(reply);
     } catch (error) {
-      setChat((prev) => {
-        const newChat = [...prev];
-        newChat[newChat.length - 1].bot = "Error connecting to server.";        
-        return newChat;
-      });
+      updateLastBotMessage("Error connecting to server.");
     }
-  };
+  }
 
   // Handler for quick options to send instantly
-  const handleQuickOption = (option) => {
+  function handleQuickOption(option) {
     sendMessage(option);
-  };
+  }
+
+  function handleCloseClick() {
+    onClose();
+  }
+
+  function handleInputChange(event) {
+    setMessage(event.target.value);
+  }
+
+  function handleInputKeyDown(event) {
+    if (event.key === "Enter") {
+      sendMessage(message);
+    }
+  }
+
+  function handleSendButtonClick() {
+    sendMessage(message);
+  }
 
   return (
     <div className="chatbot-container">
       <div className="chatbot-header">
         Turf Explorer Assistant
-        <span className="close-btn" onClick={onClose} style={{cursor: 'pointer'}}>X</span>
+        <span className="close-btn" onClick={handleCloseClick} style={{cursor: 'pointer'}}>X</span>
       </div>
 
       <div className="chatbot-messages">
@@ -140,7 +170,7 @@ function ChatBot({ onClose }) {
 
       <div className="chatbot-quick-options">
         {quickOptions.map((opt, idx) => (
-          <button key={idx} onClick={() => handleQuickOption(opt)}>
+          <button key={idx} onClick={function() { handleQuickOption(opt); }}>
             {opt}
           </button>
         ))}
@@ -149,11 +179,11 @@ function ChatBot({ onClose }) {
       <div className="chatbot-input-area">
         <input
           value={message}
-          onChange={(e) => setMessage(e.target.value)}
-          onKeyDown={(e) => e.key === "Enter" && sendMessage(message)}      
+          onChange={handleInputChange}
+          onKeyDown={handleInputKeyDown}
           placeholder="Ask something..."
         />
-        <button onClick={() => sendMessage(message)}>Send</button>
+        <button onClick={handleSendButtonClick}>Send</button>
       </div>
     </div>
   );

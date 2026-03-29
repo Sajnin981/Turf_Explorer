@@ -9,13 +9,19 @@ const PaymentCancel = () => {
   const transactionId = params.get('tran_id');
 
   useEffect(function () {
-    if (!transactionId) {
-      return;
+    async function verifyCancelOnServer() {
+      if (!transactionId) {
+        return;
+      }
+
+      try {
+        await verifyPaymentCancel(transactionId);
+      } catch (error) {
+        // Ignore UI-side fallback failures; backend callback may have already processed it.
+      }
     }
 
-    verifyPaymentCancel(transactionId).catch(function () {
-      // Ignore UI-side fallback failures; backend callback may have already processed it.
-    });
+    verifyCancelOnServer();
   }, [transactionId]);
 
   return (

@@ -27,6 +27,78 @@ const MyTurfs = () => {
   const [editSlotForm, setEditSlotForm] = useState({ startTime: '', endTime: '', price: '', status: 'AVAILABLE' });
   const [slotLoading, setSlotLoading] = useState(false);
 
+  function getApiErrorMessage(err, fallback) {
+    if (err && err.response && err.response.data && err.response.data.message) {
+      return err.response.data.message;
+    }
+    return fallback;
+  }
+
+  function getStatusText(status) {
+    if (!status) {
+      return 'PENDING';
+    }
+    return status.toUpperCase();
+  }
+
+  function countBookingsByStatus(turfId, targetStatus) {
+    const bookings = turfBookings[turfId] || [];
+    let count = 0;
+    for (const booking of bookings) {
+      if (booking.status === targetStatus) {
+        count += 1;
+      }
+    }
+    return count;
+  }
+
+  function getBookingStatusLower(status) {
+    if (!status) {
+      return 'pending';
+    }
+    return status.toLowerCase();
+  }
+
+  function getApprovalBadgeClass(statusLabel) {
+    if (statusLabel === 'APPROVED') {
+      return 'status-badge approved';
+    }
+    return 'status-badge pending';
+  }
+
+  function getApprovalBadgeText(statusLabel) {
+    if (statusLabel === 'APPROVED') {
+      return '✅ Approved';
+    }
+    return '⏳ Pending';
+  }
+
+  function getSlotPriceLabel(slot) {
+    if (slot.price) {
+      return ` (৳${slot.price})`;
+    }
+    return '';
+  }
+
+  function getSaveSlotButtonLabel() {
+    if (slotLoading) {
+      return 'Saving...';
+    }
+    return 'Save';
+  }
+
+  function getAddSlotButtonLabel() {
+    if (slotLoading) {
+      return 'Adding...';
+    }
+    return '+ Add Slot';
+  }
+
+  function closeBookingsModal() {
+    setViewingBookings(null);
+    setSelectedTurf(null);
+  }
+
   useEffect(function() {
     const userRole = localStorage.getItem('userRole');
     if (!localStorage.getItem('userEmail')) {
@@ -79,7 +151,7 @@ const MyTurfs = () => {
       alert('Turf deleted successfully!');
       loadMyTurfs();
     } catch (err) {
-      alert(err.response?.data?.message || 'Failed to delete turf.');
+      alert(getApiErrorMessage(err, 'Failed to delete turf.'));
     }
   }
 
@@ -104,7 +176,7 @@ const MyTurfs = () => {
       alert('Slot added successfully!');
       await loadSlotsForTurf(turfId);
     } catch (err) {
-      alert(err.response?.data?.message || 'Failed to add slot.');
+      alert(getApiErrorMessage(err, 'Failed to add slot.'));
     } finally {
       setSlotLoading(false);
     }
@@ -118,14 +190,18 @@ const MyTurfs = () => {
         return { ...prev, [turfId]: slots };
       });
     } catch (err) {
-      alert(err.response?.data?.message || 'Failed to load slots.');
+      alert(getApiErrorMessage(err, 'Failed to load slots.'));
     } finally {
       setLoadingSlotsFor(null);
     }
   }
 
   async function handleToggleManageSlots(turfId) {
-    const nextOpen = managingSlots === turfId ? null : turfId;
+    let nextOpen = turfId;
+    if (managingSlots === turfId) {
+      nextOpen = null;
+    }
+
     setManagingSlots(nextOpen);
     setEditingSlot(null);
     if (nextOpen && !slotsByTurf[turfId]) {
@@ -134,12 +210,22 @@ const MyTurfs = () => {
   }
 
   function handleEditSlotStart(turfId, slot) {
+    let slotPrice = '';
+    if (slot.price) {
+      slotPrice = slot.price;
+    }
+
+    let slotStatus = 'AVAILABLE';
+    if (slot.status) {
+      slotStatus = slot.status;
+    }
+
     setEditingSlot({ turfId: turfId, slotId: slot.id });
     setEditSlotForm({
       startTime: slot.startTime,
       endTime: slot.endTime,
-      price: slot.price || '',
-      status: slot.status || 'AVAILABLE'
+      price: slotPrice,
+      status: slotStatus
     });
   }
 
@@ -164,7 +250,7 @@ const MyTurfs = () => {
       setEditingSlot(null);
       await loadSlotsForTurf(turfId);
     } catch (err) {
-      alert(err.response?.data?.message || 'Failed to update slot.');
+      alert(getApiErrorMessage(err, 'Failed to update slot.'));
     } finally {
       setSlotLoading(false);
     }
@@ -177,7 +263,7 @@ const MyTurfs = () => {
       setEditingSlot(null);
       await loadSlotsForTurf(turfId);
     } catch (err) {
-      alert(err.response?.data?.message || 'Failed to delete slot.');
+      alert(getApiErrorMessage(err, 'Failed to delete slot.'));
     }
   }
 
@@ -217,19 +303,31 @@ const MyTurfs = () => {
         ) : (
           <div className="turfs-grid">
             {myTurfs.map(function(turf) {
-              const statusLabel = turf.status ? turf.status.toUpperCase() : 'PENDING';
+              const statusLabel = getStatusText(turf.status);
               const turfSlots = slotsByTurf[turf.id] || [];
+              const pendingCount = countBookingsByStatus(turf.id, 'PENDING');
+              const confirmedCount = countBookingsByStatus(turf.id, 'CONFIRMED');
+              const cancelledCount = countBookingsByStatus(turf.id, 'CANCELLED');
+
+              let turfImageUrl = null;
+              if (turf.image) {
+                turfImageUrl = turf.image;
+              } else if (turf.imageUrl) {
+                turfImageUrl = turf.imageUrl;
+              }
+
+              const hasTurfImage = turfImageUrl !== null;
               return (
                 <div key={turf.id} className="turf-card-my">
-                  <div className={`status-badge ${statusLabel === 'APPROVED' ? 'approved' : 'pending'}`}>
-                    {statusLabel === 'APPROVED' ? '✅ Approved' : '⏳ Pending'}
+                  <div className={getApprovalBadgeClass(statusLabel)}>
+                    {getApprovalBadgeText(statusLabel)}
                   </div>
 
                   <div className="turf-image-my">
-                    {(turf.image || turf.imageUrl) ? (
+                    {hasTurfImage ? (
                       <>
                         <img 
-                          src={turf.image || turf.imageUrl} 
+                          src={turfImageUrl}
                           alt={turf.name} 
                           onError={(e) => {
                             e.target.onerror = null;
@@ -252,9 +350,9 @@ const MyTurfs = () => {
                     {turf.description && <p className="description">{turf.description}</p>}
 
                     <div className="turf-stats">
-                      <span className="stat stat-pending">⏳ {(turfBookings[turf.id] || []).filter(function(b) { return b.status === 'PENDING'; }).length} Pending</span>
-                      <span className="stat stat-confirmed">✅ {(turfBookings[turf.id] || []).filter(function(b) { return b.status === 'CONFIRMED'; }).length} Confirmed</span>
-                      <span className="stat stat-cancelled">❌ {(turfBookings[turf.id] || []).filter(function(b) { return b.status === 'CANCELLED'; }).length} Cancelled</span>
+                      <span className="stat stat-pending">⏳ {pendingCount} Pending</span>
+                      <span className="stat stat-confirmed">✅ {confirmedCount} Confirmed</span>
+                      <span className="stat stat-cancelled">❌ {cancelledCount} Cancelled</span>
                     </div>
 
                     <div className="turf-actions-my">
@@ -314,7 +412,7 @@ const MyTurfs = () => {
                                         </select>
                                       </div>
                                       <button onClick={function() { handleUpdateSlot(turf.id, slot.id); }} disabled={slotLoading} style={{ background: '#3498db', color: '#fff', border: 'none', borderRadius: '4px', padding: '6px 12px', cursor: 'pointer' }}>
-                                        {slotLoading ? 'Saving...' : 'Save'}
+                                        {getSaveSlotButtonLabel()}
                                       </button>
                                       <button onClick={handleEditSlotCancel} style={{ background: '#7f8c8d', color: '#fff', border: 'none', borderRadius: '4px', padding: '6px 12px', cursor: 'pointer' }}>
                                         Cancel
@@ -322,7 +420,7 @@ const MyTurfs = () => {
                                     </div>
                                   ) : (
                                     <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: '8px' }}>
-                                      <span>{slot.startTime} - {slot.endTime}{slot.price ? ` (৳${slot.price})` : ''} — <em>{slot.status}</em></span>
+                                      <span>{slot.startTime} - {slot.endTime}{getSlotPriceLabel(slot)} — <em>{slot.status}</em></span>
                                       <div style={{ display: 'flex', gap: '6px' }}>
                                         <button onClick={function() { handleEditSlotStart(turf.id, slot); }} style={{ background: '#f39c12', color: '#fff', border: 'none', borderRadius: '4px', padding: '4px 10px', cursor: 'pointer' }}>
                                           Edit
@@ -363,7 +461,7 @@ const MyTurfs = () => {
                             </select>
                           </div>
                           <button onClick={function() { handleAddSlot(turf.id); }} disabled={slotLoading} style={{ background: '#2ecc71', color: '#fff', border: 'none', borderRadius: '4px', padding: '6px 14px', cursor: 'pointer' }}>
-                            {slotLoading ? 'Adding...' : '+ Add Slot'}
+                            {getAddSlotButtonLabel()}
                           </button>
                         </div>
                       </div>
@@ -378,17 +476,17 @@ const MyTurfs = () => {
 
       {/* Bookings Modal */}
       {viewingBookings && selectedTurf && (
-        <div className="modal-overlay" onClick={function() { setViewingBookings(null); setSelectedTurf(null); }}>
+        <div className="modal-overlay" onClick={closeBookingsModal}>
           <div className="modal-content-bookings" onClick={function(e) { e.stopPropagation(); }}>
             <div className="modal-header">
               <h2>📋 Bookings for {selectedTurf.name}</h2>
-              <button className="modal-close" onClick={function() { setViewingBookings(null); setSelectedTurf(null); }}>✕</button>
+              <button className="modal-close" onClick={closeBookingsModal}>✕</button>
             </div>
             <div className="modal-body">
               {(turfBookings[selectedTurf.id] || []).length > 0 ? (
                 <div className="bookings-list-modal">
                   {turfBookings[selectedTurf.id].map(function(booking) {
-                    const bs = booking.status ? booking.status.toLowerCase() : 'pending';
+                    const bs = getBookingStatusLower(booking.status);
                     return (
                       <div key={booking.id} className="booking-card-modal">
                         <div className="booking-header-modal">

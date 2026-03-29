@@ -22,11 +22,33 @@ const TurfListing = () => {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
 
+  function getInitialSearchStatus(searchValue) {
+    if (searchValue) {
+      return `Showing results for "${searchValue}"`;
+    }
+    return '';
+  }
+
+  function getDistanceForSort(turf) {
+    if (typeof turf.distanceKm === 'number') {
+      return turf.distanceKm;
+    }
+    return Number.MAX_VALUE;
+  }
+
+  function getNoResultsMessage() {
+    if (showAvailableOnly) {
+      return 'No available turfs at the moment.';
+    }
+    return 'No turfs found. Please check back later!';
+  }
+
   // Load turfs when page first opens and when query string changes
   useEffect(function() {
     const initialSearch = (searchParams.get('search') || '').trim();
     setSearchQuery(initialSearch);
-    loadTurfs(initialSearch, userCoords, initialSearch ? `Showing results for "${initialSearch}"` : '');
+    const initialStatus = getInitialSearchStatus(initialSearch);
+    loadTurfs(initialSearch, userCoords, initialStatus);
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [searchParams]);
 
@@ -51,12 +73,14 @@ const TurfListing = () => {
 
       const serverTurfs = await getAllTurfs(params);
       const normalizedQuery = (query || '').trim().toLowerCase();
-      const turfs = normalizedQuery
-        ? serverTurfs.filter(function(turf) {
-            const turfName = (turf.name || '').toLowerCase();
-            return turfName.includes(normalizedQuery);
-          })
-        : serverTurfs;
+      let turfs = serverTurfs;
+      if (normalizedQuery) {
+        turfs = serverTurfs.filter(function(turf) {
+          const turfName = (turf.name || '').toLowerCase();
+          return turfName.includes(normalizedQuery);
+        });
+      }
+
       handleLoadedTurfs(turfs);
       setLocationStatus(successMessage || '');
     } catch (err) {
@@ -108,8 +132,8 @@ const TurfListing = () => {
     });
   } else if (sortBy === 'nearest') {
     sortedTurfs.sort(function(turfA, turfB) {
-      const distanceA = typeof turfA.distanceKm === 'number' ? turfA.distanceKm : Number.MAX_VALUE;
-      const distanceB = typeof turfB.distanceKm === 'number' ? turfB.distanceKm : Number.MAX_VALUE;
+      const distanceA = getDistanceForSort(turfA);
+      const distanceB = getDistanceForSort(turfB);
       return distanceA - distanceB;
     });
   }
@@ -167,7 +191,12 @@ const TurfListing = () => {
   }
 
   async function handleNameSearch(overrideQuery) {
-    const query = (overrideQuery ?? searchQuery).trim();
+    let finalQuery = searchQuery;
+    if (overrideQuery !== undefined && overrideQuery !== null) {
+      finalQuery = overrideQuery;
+    }
+
+    const query = finalQuery.trim();
     if (!query) {
       await loadTurfs('', userCoords, '');
       return;
@@ -272,11 +301,7 @@ const TurfListing = () => {
             <div className="no-results">
               <div className="no-results-icon">🔍</div>
               <h2>No Turfs Found</h2>
-              <p>
-                {showAvailableOnly 
-                  ? 'No available turfs at the moment.' 
-                  : 'No turfs found. Please check back later!'}
-              </p>
+              <p>{getNoResultsMessage()}</p>
             </div>
           )}
         </div>

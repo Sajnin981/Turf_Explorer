@@ -20,12 +20,18 @@ import './App.css';
 
 // Redirects to /login if not authenticated
 function PrivateRoute({ children }) {
-  return isLoggedIn() ? children : <Navigate to="/login" replace />;
+  if (isLoggedIn()) {
+    return children;
+  }
+  return <Navigate to="/login" replace />;
 }
 
 // Redirects to /login if not admin
 function AdminRoute({ children }) {
-  return isAdmin() ? children : <Navigate to="/login" replace />;
+  if (isAdmin()) {
+    return children;
+  }
+  return <Navigate to="/login" replace />;
 }
 
 // Redirects admins/owners away from user-only booking page
@@ -33,7 +39,12 @@ function UserBookingRoute({ children }) {
   if (!isLoggedIn()) {
     return <Navigate to="/login" replace />;
   }
-  return !isAdmin() && !isOwner() ? children : <Navigate to="/turfs" replace />;
+
+  if (!isAdmin() && !isOwner()) {
+    return children;
+  }
+
+  return <Navigate to="/turfs" replace />;
 }
 
 function App() {

@@ -12,6 +12,13 @@ const PaymentSuccess = () => {
   const [loading, setLoading] = useState(Boolean(transactionId));
   const [message, setMessage] = useState('Verifying payment...');
 
+  function getStatusText() {
+    if (loading) {
+      return 'Verifying your transaction...';
+    }
+    return message;
+  }
+
   useEffect(function () {
     async function verify() {
       if (!transactionId) {
@@ -22,13 +29,28 @@ const PaymentSuccess = () => {
 
       try {
         const response = await verifyPaymentSuccess(transactionId, valId);
-        if (response?.dueAmount !== undefined && response?.dueAmount !== null && Number(response.dueAmount) > 0) {
+        const hasResponse = response !== undefined && response !== null;
+        const hasDueAmount = hasResponse && response.dueAmount !== undefined && response.dueAmount !== null;
+        let dueAmountNumber = 0;
+        if (hasDueAmount) {
+          dueAmountNumber = Number(response.dueAmount);
+        }
+
+        if (hasDueAmount && dueAmountNumber > 0) {
           setMessage(`Booking confirmed. Remaining amount: ${Number(response.dueAmount).toFixed(2)} BDT`);
         } else {
-          setMessage(response.message || 'Payment successful and booking confirmed.');
+          if (hasResponse && response.message) {
+            setMessage(response.message);
+          } else {
+            setMessage('Payment successful and booking confirmed.');
+          }
         }
       } catch (error) {
-        setMessage(error.response?.data?.message || 'Could not verify payment status automatically. Please check My Bookings.');
+        let errorMessage = 'Could not verify payment status automatically. Please check My Bookings.';
+        if (error && error.response && error.response.data && error.response.data.message) {
+          errorMessage = error.response.data.message;
+        }
+        setMessage(errorMessage);
       } finally {
         setLoading(false);
       }
@@ -41,7 +63,7 @@ const PaymentSuccess = () => {
     <div className="payment-result-page">
       <div className="payment-result-card success">
         <h2>Payment Successful</h2>
-        <p>{loading ? 'Verifying your transaction...' : message}</p>
+        <p>{getStatusText()}</p>
         {bookingId && <p><strong>Booking ID:</strong> {bookingId}</p>}
         {transactionId && <p><strong>Transaction ID:</strong> {transactionId}</p>}
 

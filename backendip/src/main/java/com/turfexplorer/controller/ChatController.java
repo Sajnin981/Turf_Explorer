@@ -173,12 +173,17 @@ public class ChatController {
         }
 
         if (intent == ChatIntent.SUPPORT) {
-            String roleHint = switch (userRole) {
-                case "admin" -> "As admin, you can cross-check payment and booking records from dashboard APIs.";
-                case "owner" -> "As owner, verify your turf/slot settings and share booking id with support.";
-                default -> "Share booking id and transaction id with support for fastest resolution.";
-            };
-            return Map.of("reply", "For support, share your booking id and transaction id with admin/project owner for quick troubleshooting.");
+            String roleHint;
+            if ("admin".equals(userRole)) {
+                roleHint = "As admin, you can cross-check payment and booking records from dashboard APIs.";
+            } else if ("owner".equals(userRole)) {
+                roleHint = "As owner, verify your turf/slot settings and share booking id with support.";
+            } else {
+                roleHint = "Share booking id and transaction id with support for fastest resolution.";
+            }
+
+            String supportReply = "For support, share your booking id and transaction id with admin/project owner for quick troubleshooting. " + roleHint;
+            return Map.of("reply", supportReply);
         }
 
         if (intent == ChatIntent.GREETING) {
@@ -248,10 +253,30 @@ public class ChatController {
         if (nearbyIntent && maxRadiusKm == null) {
             maxRadiusKm = 5.0;
         }
-        double maxPriceFilter = parsedBudget == null ? Double.MAX_VALUE : parsedBudget;
-        double scoringBudget = parsedBudget == null
-                ? approvedTurfs.stream().mapToDouble(t -> t.getPricePerHour() == null ? 0.0 : t.getPricePerHour()).max().orElse(1.0)
-                : parsedBudget;
+
+        double maxPriceFilter = Double.MAX_VALUE;
+        if (parsedBudget != null) {
+            maxPriceFilter = parsedBudget;
+        }
+
+        double scoringBudget;
+        if (parsedBudget == null) {
+            double maxObservedPrice = 0.0;
+            for (Turf turf : approvedTurfs) {
+                Double turfPrice = turf.getPricePerHour();
+                if (turfPrice != null && turfPrice > maxObservedPrice) {
+                    maxObservedPrice = turfPrice;
+                }
+            }
+            if (maxObservedPrice <= 0.0) {
+                scoringBudget = 1.0;
+            } else {
+                scoringBudget = maxObservedPrice;
+            }
+        } else {
+            scoringBudget = parsedBudget;
+        }
+
         if (scoringBudget <= 0) {
             scoringBudget = 1.0;
         }
@@ -284,29 +309,66 @@ public class ChatController {
             return Map.of("reply", "No turfs found within your budget nearby");
         }
 
-        candidates.sort(
-                Comparator
-                        .comparingDouble(TurfRecommendation::score)
-                        .thenComparingDouble(TurfRecommendation::distanceKm)
-                        .thenComparingDouble(r -> r.turf().getPricePerHour())
-                        .thenComparing(r -> safeValue(r.turf().getName(), ""))
-        );
+        candidates.sort(new Comparator<TurfRecommendation>() {
+            @Override
+            public int compare(TurfRecommendation first, TurfRecommendation second) {
+                int scoreCompare = Double.compare(first.getScore(), second.getScore());
+                if (scoreCompare != 0) {
+                    return scoreCompare;
+                }
 
-        int resultCount = Math.min((maxRadiusKm != null || nearbyIntent) ? 1 : 3, candidates.size());
-        StringBuilder reply = new StringBuilder(
-            maxRadiusKm != null
-                ? "Here is the best turf for you within " + String.format(Locale.US, "%.1f", maxRadiusKm) + " km:\n\n"
-                : "Here are the best turfs for you:\n\n"
-        );
+                int distanceCompare = Double.compare(first.getDistanceKm(), second.getDistanceKm());
+                if (distanceCompare != 0) {
+                    return distanceCompare;
+                }
+
+                double firstPrice = 0.0;
+                if (first.getTurf().getPricePerHour() != null) {
+                    firstPrice = first.getTurf().getPricePerHour();
+                }
+
+                double secondPrice = 0.0;
+                if (second.getTurf().getPricePerHour() != null) {
+                    secondPrice = second.getTurf().getPricePerHour();
+                }
+
+                int priceCompare = Double.compare(firstPrice, secondPrice);
+                if (priceCompare != 0) {
+                    return priceCompare;
+                }
+
+                String firstName = safeValue(first.getTurf().getName(), "");
+                String secondName = safeValue(second.getTurf().getName(), "");
+                return firstName.compareTo(secondName);
+            }
+        });
+
+        int requestedResultCount;
+        if (maxRadiusKm != null || nearbyIntent) {
+            requestedResultCount = 1;
+        } else {
+            requestedResultCount = 3;
+        }
+        int resultCount = Math.min(requestedResultCount, candidates.size());
+
+        StringBuilder reply = new StringBuilder();
+        if (maxRadiusKm != null) {
+            reply.append("Here is the best turf for you within ")
+                    .append(String.format(Locale.US, "%.1f", maxRadiusKm))
+                    .append(" km:\n\n");
+        } else {
+            reply.append("Here are the best turfs for you:\n\n");
+        }
+
         for (int i = 0; i < resultCount; i++) {
             TurfRecommendation rec = candidates.get(i);
             reply.append(i + 1)
                     .append(". ")
-                    .append(safeValue(rec.turf().getName(), "Turf"))
+                    .append(safeValue(rec.getTurf().getName(), "Turf"))
                     .append(" - ৳")
-                    .append(formatAmount(rec.turf().getPricePerHour()))
+                    .append(formatAmount(rec.getTurf().getPricePerHour()))
                     .append("/hr - ")
-                    .append(String.format(Locale.US, "%.1f", rec.distanceKm()))
+                    .append(String.format(Locale.US, "%.1f", rec.getDistanceKm()))
                     .append(" km away");
 
             if (i < resultCount - 1) {
@@ -324,8 +386,16 @@ public class ChatController {
         }
 
         try {
-            String value = matcher.group(1) != null ? matcher.group(1) : matcher.group(2);
-            return value == null ? null : Double.parseDouble(value);
+            String value = matcher.group(1);
+            if (value == null) {
+                value = matcher.group(2);
+            }
+
+            if (value == null) {
+                return null;
+            }
+
+            return Double.parseDouble(value);
         } catch (NumberFormatException ex) {
             return null;
         }
@@ -355,7 +425,10 @@ public class ChatController {
     }
 
     private String safeValue(String value, String fallback) {
-        return value == null ? fallback : value;
+        if (value == null) {
+            return fallback;
+        }
+        return value;
     }
 
     private boolean containsAny(String source, String... terms) {
@@ -368,8 +441,33 @@ public class ChatController {
     }
 
     private String safeName(String userName) {
-        return userName == null || userName.isBlank() ? "there" : userName;
+        if (userName == null || userName.isBlank()) {
+            return "there";
+        }
+        return userName;
     }
 
-    private record TurfRecommendation(Turf turf, double distanceKm, double score) {}
+    private static class TurfRecommendation {
+        private final Turf turf;
+        private final double distanceKm;
+        private final double score;
+
+        private TurfRecommendation(Turf turf, double distanceKm, double score) {
+            this.turf = turf;
+            this.distanceKm = distanceKm;
+            this.score = score;
+        }
+
+        public Turf getTurf() {
+            return turf;
+        }
+
+        public double getDistanceKm() {
+            return distanceKm;
+        }
+
+        public double getScore() {
+            return score;
+        }
+    }
 }

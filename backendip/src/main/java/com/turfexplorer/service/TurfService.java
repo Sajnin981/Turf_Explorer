@@ -11,10 +11,9 @@ import com.turfexplorer.repository.TurfRepository;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 
+import java.util.ArrayList;
 import java.util.Comparator;
 import java.util.List;
-import java.util.Objects;
-import java.util.stream.Collectors;
 
 @Service
 public class TurfService {
@@ -30,14 +29,31 @@ public class TurfService {
 
     public List<TurfResponse> getAllApprovedTurfs(Double latitude, Double longitude, String search) {
         List<Turf> turfs = getApprovedTurfsByName(search);
-        List<TurfResponse> responses = turfs
-                .stream()
-                .map(turf -> mapToResponse(turf, latitude, longitude))
-                .collect(Collectors.toList());
+        List<TurfResponse> responses = new ArrayList<>();
+        for (Turf turf : turfs) {
+            TurfResponse response = mapToResponse(turf, latitude, longitude);
+            responses.add(response);
+        }
 
         if (latitude != null && longitude != null) {
-            responses.sort(Comparator.comparing(response -> response.getDistanceKm() == null ? Double.MAX_VALUE : response.getDistanceKm()));
+            responses.sort(new Comparator<TurfResponse>() {
+                @Override
+                public int compare(TurfResponse first, TurfResponse second) {
+                    double firstDistance = Double.MAX_VALUE;
+                    if (first.getDistanceKm() != null) {
+                        firstDistance = first.getDistanceKm();
+                    }
+
+                    double secondDistance = Double.MAX_VALUE;
+                    if (second.getDistanceKm() != null) {
+                        secondDistance = second.getDistanceKm();
+                    }
+
+                    return Double.compare(firstDistance, secondDistance);
+                }
+            });
         }
+
         return responses;
     }
 
@@ -57,35 +73,53 @@ public class TurfService {
         }
 
         int cappedLimit = Math.max(1, Math.min(limit, 50));
-        List<TurfResponse> responses = turfRepository.findByStatusAndLatitudeIsNotNullAndLongitudeIsNotNull(TurfStatus.APPROVED)
-                .stream()
-                .map(turf -> mapToResponse(turf, latitude, longitude))
-                .collect(Collectors.toList());
+        List<Turf> approvedTurfsWithCoordinates = turfRepository.findByStatusAndLatitudeIsNotNullAndLongitudeIsNotNull(TurfStatus.APPROVED);
+        List<TurfResponse> responses = new ArrayList<>();
+        for (Turf turf : approvedTurfsWithCoordinates) {
+            TurfResponse response = mapToResponse(turf, latitude, longitude);
+            responses.add(response);
+        }
 
-        List<TurfResponse> distanceAware = responses.stream()
-                .filter(response -> response.getDistanceKm() != null)
-                .sorted(Comparator.comparing(TurfResponse::getDistanceKm))
-                .collect(Collectors.toList());
+        List<TurfResponse> distanceAware = new ArrayList<>();
+        for (TurfResponse response : responses) {
+            if (response.getDistanceKm() != null) {
+                distanceAware.add(response);
+            }
+        }
+
+        distanceAware.sort(new Comparator<TurfResponse>() {
+            @Override
+            public int compare(TurfResponse first, TurfResponse second) {
+                return Double.compare(first.getDistanceKm(), second.getDistanceKm());
+            }
+        });
 
         if (distanceAware.isEmpty()) {
             // Preserve legacy behavior instead of returning an empty list when coordinates are missing in DB
             return getAllApprovedTurfs(null, null, null);
         }
 
-        return distanceAware.stream()
-                .limit(cappedLimit)
-                .collect(Collectors.toList());
+        List<TurfResponse> limitedResponses = new ArrayList<>();
+        for (int index = 0; index < distanceAware.size() && index < cappedLimit; index++) {
+            limitedResponses.add(distanceAware.get(index));
+        }
+
+        return limitedResponses;
     }
 
     public List<SlotResponse> getTurfSlots(Long turfId) {
-if (!turfRepository.existsById(turfId)) {
-    throw new ResourceNotFoundException("Turf not found with id: " + turfId);
-}
-        
-        return slotRepository.findByTurfId(turfId)
-                .stream()
-                .map(this::mapSlotToResponse)
-                .collect(Collectors.toList());
+        if (!turfRepository.existsById(turfId)) {
+            throw new ResourceNotFoundException("Turf not found with id: " + turfId);
+        }
+
+        List<Slot> slots = slotRepository.findByTurfId(turfId);
+        List<SlotResponse> slotResponses = new ArrayList<>();
+        for (Slot slot : slots) {
+            SlotResponse slotResponse = mapSlotToResponse(slot);
+            slotResponses.add(slotResponse);
+        }
+
+        return slotResponses;
     }
 
     private List<Turf> getApprovedTurfsByName(String search) {
@@ -94,10 +128,15 @@ if (!turfRepository.existsById(turfId)) {
         }
 
         String normalizedSearch = search.trim();
-        return turfRepository.findByStatusAndNameContainingIgnoreCase(TurfStatus.APPROVED, normalizedSearch)
-                .stream()
-                .filter(Objects::nonNull)
-                .collect(Collectors.toList());
+        List<Turf> matchedTurfs = turfRepository.findByStatusAndNameContainingIgnoreCase(TurfStatus.APPROVED, normalizedSearch);
+        List<Turf> safeMatchedTurfs = new ArrayList<>();
+        for (Turf turf : matchedTurfs) {
+            if (turf != null) {
+                safeMatchedTurfs.add(turf);
+            }
+        }
+
+        return safeMatchedTurfs;
     }
 
     private TurfResponse mapToResponse(Turf turf, Double latitude, Double longitude) {

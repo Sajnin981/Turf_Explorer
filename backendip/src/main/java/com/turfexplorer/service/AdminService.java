@@ -9,8 +9,8 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.util.ArrayList;
 import java.util.List;
-import java.util.stream.Collectors;
 
 @Service
 public class AdminService {
@@ -19,17 +19,25 @@ public class AdminService {
     private TurfRepository turfRepository;
 
     public List<TurfResponse> getPendingTurfs() {
-        return turfRepository.findByStatus(TurfStatus.PENDING)
-                .stream()
-                .map(this::mapToResponse)
-                .collect(Collectors.toList());
+        List<Turf> pendingTurfs = turfRepository.findByStatus(TurfStatus.PENDING);
+        List<TurfResponse> pendingResponses = new ArrayList<>();
+        for (Turf turf : pendingTurfs) {
+            TurfResponse response = mapToResponse(turf);
+            pendingResponses.add(response);
+        }
+
+        return pendingResponses;
     }
 
     public List<TurfResponse> getApprovedTurfs() {
-        return turfRepository.findByStatus(TurfStatus.APPROVED)
-                .stream()
-                .map(this::mapToResponse)
-                .collect(Collectors.toList());
+        List<Turf> approvedTurfs = turfRepository.findByStatus(TurfStatus.APPROVED);
+        List<TurfResponse> approvedResponses = new ArrayList<>();
+        for (Turf turf : approvedTurfs) {
+            TurfResponse response = mapToResponse(turf);
+            approvedResponses.add(response);
+        }
+
+        return approvedResponses;
     }
 
     @Transactional
