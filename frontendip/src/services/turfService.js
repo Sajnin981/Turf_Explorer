@@ -2,16 +2,39 @@ import api from './api';
 
 // Normalize backend turf object to match frontend field names
 function normalizeTurf(t) {
-  return {
-    ...t,
+  const normalizedTurf = {
+    id: t.id,
+    name: t.name,
+    location: t.location,
+    turfType: t.turfType,
     type: t.turfType,
-    image: t.imageUrl || null,
-    available: t.status === 'APPROVED',
+    pricePerHour: t.pricePerHour,
     price: t.pricePerHour,
+    description: t.description,
+    imageUrl: t.imageUrl,
+    image: null,
+    ownerId: t.ownerId,
+    status: t.status,
+    createdAt: t.createdAt,
     latitude: t.latitude,
     longitude: t.longitude,
-    distanceKm: typeof t.distanceKm === 'number' ? t.distanceKm : null,
+    available: false,
+    distanceKm: null,
   };
+
+  if (t.imageUrl) {
+    normalizedTurf.image = t.imageUrl;
+  }
+
+  if (t.status === 'APPROVED') {
+    normalizedTurf.available = true;
+  }
+
+  if (typeof t.distanceKm === 'number') {
+    normalizedTurf.distanceKm = t.distanceKm;
+  }
+
+  return normalizedTurf;
 }
 
 export async function getAllTurfs(params = {}) {
@@ -27,15 +50,30 @@ export async function getAllTurfs(params = {}) {
   }
 
   const query = searchParams.toString();
-  const response = await api.get(query ? `/turfs?${query}` : '/turfs');
-  return response.data.map(normalizeTurf);
+  let endpoint = '/turfs';
+  if (query) {
+    endpoint = '/turfs?' + query;
+  }
+
+  const response = await api.get(endpoint);
+  const normalizedTurfs = [];
+  for (const turf of response.data) {
+    normalizedTurfs.push(normalizeTurf(turf));
+  }
+
+  return normalizedTurfs;
 }
 
 export async function getNearbyTurfs(lat, lng, limit = 20) {
   const response = await api.get('/turfs/nearby', {
     params: { lat, lng, limit },
   });
-  return response.data.map(normalizeTurf);
+  const normalizedTurfs = [];
+  for (const turf of response.data) {
+    normalizedTurfs.push(normalizeTurf(turf));
+  }
+
+  return normalizedTurfs;
 }
 
 export async function getTurfById(id) {
@@ -57,7 +95,12 @@ export async function submitTurf(turfData) {
 // Owner: get my turfs
 export async function getMyTurfs() {
   const response = await api.get('/owner/my-turfs');
-  return response.data.map(normalizeTurf);
+  const normalizedTurfs = [];
+  for (const turf of response.data) {
+    normalizedTurfs.push(normalizeTurf(turf));
+  }
+
+  return normalizedTurfs;
 }
 
 // Owner: delete a turf

@@ -18,8 +18,8 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.util.ArrayList;
 import java.util.List;
-import java.util.stream.Collectors;
 
 @Service
 public class BookingService {
@@ -79,14 +79,17 @@ public class BookingService {
     }
 
     public List<BookingResponse> getMyBookings(Long userId) {
-        return bookingRepository.findByUserId(userId)
-                .stream()
-                .map(booking -> {
-                    Turf turf = turfRepository.findById(booking.getTurfId()).orElse(null);
-                    Slot slot = slotRepository.findById(booking.getSlotId()).orElse(null);
-                    return mapToResponse(booking, turf, slot);
-                })
-                .collect(Collectors.toList());
+        List<Booking> bookings = bookingRepository.findByUserId(userId);
+        List<BookingResponse> bookingResponses = new ArrayList<>();
+
+        for (Booking booking : bookings) {
+            Turf turf = turfRepository.findById(booking.getTurfId()).orElse(null);
+            Slot slot = slotRepository.findById(booking.getSlotId()).orElse(null);
+            BookingResponse response = mapToResponse(booking, turf, slot);
+            bookingResponses.add(response);
+        }
+
+        return bookingResponses;
     }
 
     @Transactional

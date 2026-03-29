@@ -3,12 +3,41 @@ import { Link } from 'react-router-dom';
 import './TurfCard.css';
 
 const TurfCard = ({ turf }) => {
+  let imageUrl = null;
+  if (turf.image) {
+    imageUrl = turf.image;
+  } else if (turf.imageUrl) {
+    imageUrl = turf.imageUrl;
+  }
+
+  const hasImage = imageUrl !== null;
+
+  let pricePerHour = turf.price;
+  if (!pricePerHour) {
+    pricePerHour = turf.pricePerHour;
+  }
+
+  let availabilityClass = 'unavailable';
+  if (turf.available) {
+    availabilityClass = 'available';
+  }
+
+  let availabilityText = '{"\u2717"}';
+  if (turf.available) {
+    availabilityText = '{"\u2713"}';
+  }
+
+  let placeholderDisplay = 'flex';
+  if (hasImage) {
+    placeholderDisplay = 'none';
+  }
+
   return (
     <div className="turf-card">
       <div className="turf-image">
-        {(turf.image || turf.imageUrl) ? (
+        {hasImage && (
           <img 
-            src={turf.image || turf.imageUrl} 
+            src={imageUrl}
             alt={turf.name} 
             onError={(e) => {
               e.target.onerror = null; 
@@ -16,10 +45,10 @@ const TurfCard = ({ turf }) => {
               e.target.nextSibling.style.display = 'flex';
             }}
           />
-        ) : null}
+        )}
         <div 
           className="turf-placeholder" 
-          style={{ display: (turf.image || turf.imageUrl) ? 'none' : 'flex' }}
+          style={{ display: placeholderDisplay }}
         >
           <span className="turf-icon">{"\uD83C\uDFDF"}</span>
         </div>
@@ -34,12 +63,12 @@ const TurfCard = ({ turf }) => {
         
         <div className="turf-meta">
           <span className="turf-type">{"\u26BD"} {turf.type}</span>
-          <span className="turf-price">Tk {turf.price || turf.pricePerHour}/hr</span>
+          <span className="turf-price">Tk {pricePerHour}/hr</span>
         </div>
 
         <div className="turf-status">
-          <span className={`availability ${turf.available ? 'available' : 'unavailable'}`}>
-            {turf.available ? '{"\u2713"}' : '{"\u2717"}'}
+          <span className={`availability ${availabilityClass}`}>
+            {availabilityText}
           </span>
         </div>
 

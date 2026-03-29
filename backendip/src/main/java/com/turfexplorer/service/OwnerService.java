@@ -17,11 +17,11 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.time.LocalTime;
+import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
-import java.util.stream.Collectors;
 
 @Service
 public class OwnerService {
@@ -54,10 +54,14 @@ public class OwnerService {
     }
 
     public List<TurfResponse> getMyTurfs(Long userId) {
-        return turfRepository.findByOwnerId(userId)
-                .stream()
-                .map(this::mapTurfToResponse)
-                .collect(Collectors.toList());
+        List<Turf> myTurfs = turfRepository.findByOwnerId(userId);
+        List<TurfResponse> turfResponses = new ArrayList<>();
+        for (Turf turf : myTurfs) {
+            TurfResponse turfResponse = mapTurfToResponse(turf);
+            turfResponses.add(turfResponse);
+        }
+
+        return turfResponses;
     }
 
     @Transactional
@@ -94,7 +98,11 @@ public class OwnerService {
         slot.setStartTime(request.getStartTime());
         slot.setEndTime(request.getEndTime());
         slot.setPrice(request.getPrice());
-        slot.setStatus(request.getStatus() != null ? request.getStatus() : SlotStatus.AVAILABLE);
+        if (request.getStatus() != null) {
+            slot.setStatus(request.getStatus());
+        } else {
+            slot.setStatus(SlotStatus.AVAILABLE);
+        }
 
         slot = slotRepository.save(slot);
         return mapSlotToResponse(slot);
@@ -163,13 +171,22 @@ public class OwnerService {
     }
 
     private void validateSlotOverlap(Long turfId, LocalTime startTime, LocalTime endTime, Long excludeSlotId) {
-        List<Slot> existingSlots = excludeSlotId == null
-                ? slotRepository.findByTurfId(turfId)
-                : slotRepository.findByTurfIdAndIdNot(turfId, excludeSlotId);
+        List<Slot> existingSlots;
+        if (excludeSlotId == null) {
+            existingSlots = slotRepository.findByTurfId(turfId);
+        } else {
+            existingSlots = slotRepository.findByTurfIdAndIdNot(turfId, excludeSlotId);
+        }
 
-        boolean overlaps = existingSlots.stream().anyMatch(existing ->
-                startTime.isBefore(existing.getEndTime()) && endTime.isAfter(existing.getStartTime())
-        );
+        boolean overlaps = false;
+        for (Slot existing : existingSlots) {
+            boolean startsBeforeExistingEnds = startTime.isBefore(existing.getEndTime());
+            boolean endsAfterExistingStarts = endTime.isAfter(existing.getStartTime());
+            if (startsBeforeExistingEnds && endsAfterExistingStarts) {
+                overlaps = true;
+                break;
+            }
+        }
 
         if (overlaps) {
             throw new BadRequestException("Slot overlaps with an existing slot for this turf");
@@ -184,13 +201,15 @@ public class OwnerService {
             throw new BadRequestException("You can only view bookings of your own turfs");
         }
 
-        return bookingRepository.findByTurfId(turfId)
-                .stream()
-                .map(booking -> {
-                    Slot slot = slotRepository.findById(booking.getSlotId()).orElse(null);
-                    return mapBookingToResponse(booking, turf, slot);
-                })
-                .collect(Collectors.toList());
+        List<Booking> turfBookings = bookingRepository.findByTurfId(turfId);
+        List<BookingResponse> bookingResponses = new ArrayList<>();
+        for (Booking booking : turfBookings) {
+            Slot slot = slotRepository.findById(booking.getSlotId()).orElse(null);
+            BookingResponse bookingResponse = mapBookingToResponse(booking, turf, slot);
+            bookingResponses.add(bookingResponse);
+        }
+
+        return bookingResponses;
     }
 
     public Map<String, Long> getTurfStatistics(Long turfId, Long userId) {
@@ -202,9 +221,13 @@ public class OwnerService {
         }
 
         Map<String, Long> stats = new HashMap<>();
-        stats.put("pending", bookingRepository.findByTurfIdAndStatus(turfId, BookingStatus.PENDING).stream().count());
-        stats.put("confirmed", bookingRepository.findByTurfIdAndStatus(turfId, BookingStatus.CONFIRMED).stream().count());
-        stats.put("cancelled", bookingRepository.findByTurfIdAndStatus(turfId, BookingStatus.CANCELLED).stream().count());
+        long pendingCount = bookingRepository.findByTurfIdAndStatus(turfId, BookingStatus.PENDING).size();
+        long confirmedCount = bookingRepository.findByTurfIdAndStatus(turfId, BookingStatus.CONFIRMED).size();
+        long cancelledCount = bookingRepository.findByTurfIdAndStatus(turfId, BookingStatus.CANCELLED).size();
+
+        stats.put("pending", pendingCount);
+        stats.put("confirmed", confirmedCount);
+        stats.put("cancelled", cancelledCount);
 
         return stats;
     }

@@ -20,6 +20,20 @@ const Register = () => {
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
 
+  function getRegisterErrorMessage(err) {
+    if (err && err.response && err.response.data && err.response.data.message) {
+      return err.response.data.message;
+    }
+    return 'Registration failed. Please try again.';
+  }
+
+  function getSubmitButtonText() {
+    if (loading) {
+      return 'Creating Account...';
+    }
+    return 'Create Account';
+  }
+
   async function handleSubmit(event) {
     event.preventDefault();
     setError('');
@@ -39,7 +53,7 @@ const Register = () => {
         navigate('/turfs');
       }
     } catch (err) {
-      const msg = err.response?.data?.message || 'Registration failed. Please try again.';
+      const msg = getRegisterErrorMessage(err);
       setError(msg);
     } finally {
       setLoading(false);
@@ -153,7 +167,7 @@ const Register = () => {
             </div>
 
             <button type="submit" className="btn btn-primary auth-btn" disabled={loading}>
-              {loading ? 'Creating Account...' : 'Create Account'}
+              {getSubmitButtonText()}
             </button>
           </form>
 

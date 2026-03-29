@@ -23,6 +23,30 @@ const TurfDetails = () => {
   const currentRole = getRole();
   const isBookingRestrictedRole = currentRole === 'admin' || currentRole === 'owner';
 
+  function getErrorMessage(err, fallback) {
+    if (err && err.response && err.response.data && err.response.data.message) {
+      return err.response.data.message;
+    }
+    return fallback;
+  }
+
+  function getSlotButtonClass(isSelected) {
+    if (isSelected) {
+      return 'slot-btn selected';
+    }
+    return 'slot-btn';
+  }
+
+  function getBookingTotalPrice() {
+    if (!selectedSlot) {
+      return turf.pricePerHour;
+    }
+    if (selectedSlot.price) {
+      return selectedSlot.price;
+    }
+    return turf.pricePerHour;
+  }
+
   useEffect(function() {
     async function fetchData() {
       setLoading(true);
@@ -69,7 +93,7 @@ const TurfDetails = () => {
       alert(`Booking confirmed!\n\nTurf: ${turf.name}\nDate: ${selectedDate}\nTime: ${selectedSlot.startTime} - ${selectedSlot.endTime}`);
       navigate('/my-bookings');
     } catch (err) {
-      const msg = err.response?.data?.message || 'Booking failed. The slot may already be taken.';
+      const msg = getErrorMessage(err, 'Booking failed. The slot may already be taken.');
       alert(msg);
     } finally {
       setBookingLoading(false);
@@ -112,6 +136,35 @@ const TurfDetails = () => {
     );
   }
 
+  let hasTurfImage = false;
+  if (turf && turf.image) {
+    hasTurfImage = true;
+  }
+
+  let turfAvailabilityClass = 'unavailable';
+  let turfAvailabilityText = '{"\u2717"} Unavailable';
+  if (turf && turf.available) {
+    turfAvailabilityClass = 'available';
+    turfAvailabilityText = '{"\u2713"} Available';
+  }
+
+  let turfPricePerHour = turf.pricePerHour;
+  if (turf && turf.price) {
+    turfPricePerHour = turf.price;
+  }
+
+  let slotSummaryText = 'No slots available';
+  if (slots.length > 0) {
+    slotSummaryText = `${slots.length} slots available`;
+  }
+
+  let bookingButtonLabel = 'Confirm Booking';
+  if (bookingLoading) {
+    bookingButtonLabel = 'Booking...';
+  } else if (!turf.available) {
+    bookingButtonLabel = 'Currently Unavailable';
+  }
+
   return (
     <div className="turf-details">
       {/* Back Button */}
@@ -128,7 +181,7 @@ const TurfDetails = () => {
           {/* Turf Image */}
           <div className="details-image-section">
             <div className="details-image">
-              {turf.image ? (
+              {hasTurfImage ? (
                 <img 
                   src={turf.image} 
                   alt={turf.name} 
@@ -156,8 +209,8 @@ const TurfDetails = () => {
             <div className="info-header">
               <h1 className="details-title">{turf.name}</h1>
               <div className="info-meta">
-                <span className={`status ${turf.available ? 'available' : 'unavailable'}`}>
-                  {turf.available ? '{"\u2713"} Available' : '{"\u2717"} Unavailable'}
+                <span className={`status ${turfAvailabilityClass}`}>
+                  {turfAvailabilityText}
                 </span>
               </div>
             </div>
@@ -174,14 +227,12 @@ const TurfDetails = () => {
 
             <div className="info-item">
               <span className="info-icon">Tk</span>
-              <span className="info-text price-text">Tk {turf.price || turf.pricePerHour} per hour</span>
+              <span className="info-text price-text">Tk {turfPricePerHour} per hour</span>
             </div>
 
             <div className="info-item">
               <span className="info-icon">{"\uD83D\uDD51"}</span>
-              <span className="info-text">
-                {slots.length > 0 ? `${slots.length} slots available` : 'No slots available'}
-              </span>
+              <span className="info-text">{slotSummaryText}</span>
             </div>
 
             <div className="description">
@@ -220,7 +271,7 @@ const TurfDetails = () => {
                       return (
                         <button
                           key={slot.id}
-                          className={`slot-btn ${isSelected ? 'selected' : ''}`}
+                          className={getSlotButtonClass(isSelected)}
                           onClick={function() { handleSlotSelect(slot); }}
                         >
                           {slot.startTime} - {slot.endTime}
@@ -256,7 +307,7 @@ const TurfDetails = () => {
                   </div>
                   <div className="summary-item total">
                     <span>Total:</span>
-                    <span>Tk {selectedSlot.price || turf.pricePerHour}</span>
+                    <span>Tk {getBookingTotalPrice()}</span>
                   </div>
                 </div>
               )}
@@ -267,7 +318,7 @@ const TurfDetails = () => {
                 onClick={handleBooking}
                 disabled={!turf.available || !selectedDate || !selectedSlot || bookingLoading}
               >
-                {bookingLoading ? 'Booking...' : !turf.available ? 'Currently Unavailable' : 'Confirm Booking'}
+                {bookingButtonLabel}
               </button>
             </div>
           </div>

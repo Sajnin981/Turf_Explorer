@@ -22,6 +22,13 @@ const AddTurf = () => {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
 
+  function getSubmitErrorMessage(err) {
+    if (err && err.response && err.response.data && err.response.data.message) {
+      return err.response.data.message;
+    }
+    return 'Failed to submit turf. Please try again.';
+  }
+
   // Check user authentication when page loads
   useEffect(function() {
     const userEmail = localStorage.getItem('userEmail');
@@ -66,10 +73,31 @@ const AddTurf = () => {
       alert('Turf submitted! Your turf is waiting for admin approval.');
       navigate('/my-turfs');
     } catch (err) {
-      setError(err.response?.data?.message || 'Failed to submit turf. Please try again.');
+      setError(getSubmitErrorMessage(err));
     } finally {
       setLoading(false);
     }
+  }
+
+  function handleImageFileChange(event) {
+    const file = event.target.files[0];
+    if (!file) {
+      setImageUrl('');
+      return;
+    }
+
+    const reader = new FileReader();
+    reader.onloadend = function() {
+      setImageUrl(reader.result);
+    };
+    reader.readAsDataURL(file);
+  }
+
+  function getSubmitButtonText() {
+    if (loading) {
+      return 'Submitting...';
+    }
+    return 'Submit Turf';
   }
 
   // Handler functions for form inputs
@@ -242,18 +270,7 @@ const AddTurf = () => {
               type="file"
               id="imageFile"
               accept="image/*"
-              onChange={(e) => {
-                const file = e.target.files[0];
-                if (file) {
-                  const reader = new FileReader();
-                  reader.onloadend = () => {
-                    setImageUrl(reader.result);
-                  };
-                  reader.readAsDataURL(file);
-                } else {
-                  setImageUrl('');
-                }
-              }}
+              onChange={handleImageFileChange}
             />
             {imageUrl && (
               <div style={{ marginTop: '10px' }}>
@@ -271,7 +288,7 @@ const AddTurf = () => {
               Cancel
             </button>
             <button type="submit" className="btn btn-primary" disabled={loading}>
-              {loading ? 'Submitting...' : 'Submit Turf'}
+              {getSubmitButtonText()}
             </button>
           </div>
         </form>

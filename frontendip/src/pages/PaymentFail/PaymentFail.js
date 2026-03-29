@@ -9,13 +9,19 @@ const PaymentFail = () => {
   const transactionId = params.get('tran_id');
 
   useEffect(function () {
-    if (!transactionId) {
-      return;
+    async function verifyFailureOnServer() {
+      if (!transactionId) {
+        return;
+      }
+
+      try {
+        await verifyPaymentFail(transactionId);
+      } catch (error) {
+        // Ignore UI-side fallback failures; backend callback may have already processed it.
+      }
     }
 
-    verifyPaymentFail(transactionId).catch(function () {
-      // Ignore UI-side fallback failures; backend callback may have already processed it.
-    });
+    verifyFailureOnServer();
   }, [transactionId]);
 
   return (

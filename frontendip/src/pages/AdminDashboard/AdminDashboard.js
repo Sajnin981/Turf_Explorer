@@ -14,6 +14,40 @@ const AdminDashboard = () => {
   const [loading, setLoading] = useState(true);
   const [searchTerm, setSearchTerm] = useState('');
 
+  function getApiErrorMessage(err, fallback) {
+    if (err && err.response && err.response.data && err.response.data.message) {
+      return err.response.data.message;
+    }
+    return fallback;
+  }
+
+  function getTurfNameForConfirm(turf) {
+    if (turf && turf.name) {
+      return turf.name;
+    }
+    return 'this turf';
+  }
+
+  function getEmptyTitle(hasSearch, sectionType) {
+    if (hasSearch) {
+      return 'No Matching Turfs';
+    }
+    if (sectionType === 'pending') {
+      return 'No Pending Turfs';
+    }
+    return 'No Approved Turfs';
+  }
+
+  function getEmptyDescription(hasSearch, sectionType) {
+    if (hasSearch) {
+      return 'Try a different search term';
+    }
+    if (sectionType === 'pending') {
+      return 'All submissions have been reviewed!';
+    }
+    return 'Start by approving some pending turfs!';
+  }
+
   useEffect(function() {
     const isAdmin = localStorage.getItem('userRole') === 'admin';
     const isLoggedIn = localStorage.getItem('isLoggedIn') === 'true';
@@ -47,19 +81,24 @@ const AdminDashboard = () => {
       alert('✅ Turf approved and is now live on the site.');
       loadTurfs();
     } catch (err) {
-      alert(err.response?.data?.message || 'Failed to approve turf.');
+      alert(getApiErrorMessage(err, 'Failed to approve turf.'));
     }
   }
 
   async function handleDecline(turfId) {
     const turf = pendingTurfs.find(function(t) { return t.id === turfId; });
-    if (!window.confirm(`Decline "${turf?.name}"? This will reject the submission.`)) return;
+    const turfName = getTurfNameForConfirm(turf);
+    const shouldDecline = window.confirm(`Decline "${turfName}"? This will reject the submission.`);
+    if (!shouldDecline) {
+      return;
+    }
+
     try {
       await api.put(`/admin/reject/${turfId}`);
       alert('Turf has been rejected.');
       loadTurfs();
     } catch (err) {
-      alert(err.response?.data?.message || 'Failed to reject turf.');
+      alert(getApiErrorMessage(err, 'Failed to reject turf.'));
     }
   }
 
@@ -164,8 +203,8 @@ const AdminDashboard = () => {
             {filteredPendingTurfs.length === 0 && (
               <div className="empty-state">
                 <div className="empty-icon">📭</div>
-                <h3>{searchTerm ? 'No Matching Turfs' : 'No Pending Turfs'}</h3>
-                <p>{searchTerm ? 'Try a different search term' : 'All submissions have been reviewed!'}</p>
+                <h3>{getEmptyTitle(Boolean(searchTerm), 'pending')}</h3>
+                <p>{getEmptyDescription(Boolean(searchTerm), 'pending')}</p>
               </div>
             )}
           </div>
@@ -198,8 +237,8 @@ const AdminDashboard = () => {
             {filteredApprovedTurfs.length === 0 && (
               <div className="empty-state">
                 <div className="empty-icon">🏟️</div>
-                <h3>{searchTerm ? 'No Matching Turfs' : 'No Approved Turfs'}</h3>
-                <p>{searchTerm ? 'Try a different search term' : 'Start by approving some pending turfs!'}</p>
+                <h3>{getEmptyTitle(Boolean(searchTerm), 'approved')}</h3>
+                <p>{getEmptyDescription(Boolean(searchTerm), 'approved')}</p>
               </div>
             )}
           </div>

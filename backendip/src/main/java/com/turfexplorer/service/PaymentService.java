@@ -45,6 +45,7 @@ import java.time.format.DateTimeFormatter;
 import java.util.Arrays;
 import java.util.List;
 import java.util.Map;
+import java.util.Optional;
 import java.util.UUID;
 
 @Service
@@ -129,6 +130,7 @@ public class PaymentService {
             throw new BadRequestException("Slot is already booked for this date");
         }
 
+        // Reconcile any existing payment session for this slot/date before creating a new one.
         Payment activePayment = paymentRepository.findFirstBySlotIdAndBookingDateAndStatusInOrderByCreatedAtDesc(
                 request.getSlotId(),
                 request.getBookingDate(),
@@ -142,9 +144,15 @@ public class PaymentService {
             }
 
             if (isPaidStatus(activePayment.getStatus()) && activePayment.getBookingId() != null) {
-                boolean hasConfirmedBooking = bookingRepository.findById(activePayment.getBookingId())
-                        .map(b -> b.getStatus() == BookingStatus.CONFIRMED)
-                        .orElse(false);
+                boolean hasConfirmedBooking = false;
+                Optional<Booking> activePaymentBooking = bookingRepository.findById(activePayment.getBookingId());
+                if (activePaymentBooking.isPresent()) {
+                    Booking foundBooking = activePaymentBooking.get();
+                    if (foundBooking.getStatus() == BookingStatus.CONFIRMED) {
+                        hasConfirmedBooking = true;
+                    }
+                }
+
                 if (hasConfirmedBooking) {
                     throw new BadRequestException("Payment already completed for this slot and date");
                 }
@@ -194,16 +202,18 @@ public class PaymentService {
         payment.setTurfId(request.getTurfId());
         payment.setSlotId(request.getSlotId());
         payment.setBookingDate(request.getBookingDate());
-        bookingRepository.findFirstByUserIdAndSlotIdAndBookingDateAndStatusInOrderByCreatedAtDesc(
+        Optional<Booking> existingBookingOptional = bookingRepository.findFirstByUserIdAndSlotIdAndBookingDateAndStatusInOrderByCreatedAtDesc(
                 userId,
                 request.getSlotId(),
                 request.getBookingDate(),
                 Arrays.asList(BookingStatus.PENDING, BookingStatus.CONFIRMED)
-        ).ifPresent(existingBooking -> {
+        );
+        if (existingBookingOptional.isPresent()) {
+            Booking existingBooking = existingBookingOptional.get();
             if (existingBooking.getTurfId().equals(request.getTurfId())) {
                 payment.setBookingId(existingBooking.getId());
             }
-        });
+        }
         payment.setAmount(paidAmount);
         payment.setTotalAmount(totalAmount);
         payment.setPaidAmount(paidAmount);
@@ -241,16 +251,21 @@ public class PaymentService {
             throw new BadRequestException("Remaining payment is only available for partially paid confirmed bookings");
         }
 
-        double dueAmount = roundAmount(booking.getDueAmount() == null ? 0.0 : booking.getDueAmount());
+        double rawDueAmount = 0.0;
+        if (booking.getDueAmount() != null) {
+            rawDueAmount = booking.getDueAmount();
+        }
+        double dueAmount = roundAmount(rawDueAmount);
         if (dueAmount <= 0) {
             throw new BadRequestException("No due amount left for this booking");
         }
 
+        // A user can only keep one active pending due-payment session at a time.
         Payment existingPending = paymentRepository.findFirstByUserIdAndSlotIdAndBookingDateAndStatusInOrderByCreatedAtDesc(
                 userId,
                 booking.getSlotId(),
                 booking.getBookingDate(),
-                List.of(PaymentStatus.PENDING)
+            Arrays.asList(PaymentStatus.PENDING)
         ).orElse(null);
         if (existingPending != null) {
             existingPending.setStatus(PaymentStatus.FAILED);
@@ -294,7 +309,11 @@ public class PaymentService {
         payment.setBookingDate(booking.getBookingDate());
         payment.setBookingId(bookingId);
         payment.setAmount(dueAmount);
-        payment.setTotalAmount(roundAmount(booking.getTotalAmount() == null ? dueAmount : booking.getTotalAmount()));
+        double totalAmountForPayment = dueAmount;
+        if (booking.getTotalAmount() != null) {
+            totalAmountForPayment = booking.getTotalAmount();
+        }
+        payment.setTotalAmount(roundAmount(totalAmountForPayment));
         payment.setPaidAmount(dueAmount);
         payment.setIsPartial(Boolean.FALSE);
         payment.setTransactionId(transactionId);
@@ -388,6 +407,7 @@ public class PaymentService {
 
     private PaymentCallbackResultResponse completeSuccess(Payment payment, String valId) {
 
+        // This guard prevents old/replaced payment links from being accepted later.
         if (payment.getStatus() != PaymentStatus.PENDING && !isPaidStatus(payment.getStatus())) {
             return new PaymentCallbackResultResponse(
                     "FAILED",
@@ -398,9 +418,11 @@ public class PaymentService {
         }
 
         if (isPaidStatus(payment.getStatus())) {
-            Booking existingBooking = payment.getBookingId() == null
-                    ? null
-                    : bookingRepository.findById(payment.getBookingId()).orElse(null);
+            Booking existingBooking = null;
+            if (payment.getBookingId() != null) {
+                existingBooking = bookingRepository.findById(payment.getBookingId()).orElse(null);
+            }
+
             if (existingBooking != null) {
                 return buildCallbackResponse(
                         "SUCCESS",
@@ -428,6 +450,7 @@ public class PaymentService {
             return new PaymentCallbackResultResponse("FAILED", "Minimum 50% advance was not paid", payment.getTransactionId(), null);
         }
 
+        // Double-check slot ownership after gateway success to prevent race-condition double booking.
         Booking existingConfirmedForSlot = bookingRepository.findBySlotIdAndBookingDateAndStatus(
                 payment.getSlotId(),
                 payment.getBookingDate(),
@@ -445,16 +468,25 @@ public class PaymentService {
         payment.setGatewayTransactionId(getString(validationResponse, "bank_tran_id"));
         payment.setTrxId(payment.getGatewayTransactionId());
         payment.setBookingId(booking.getId());
-        payment.setStatus(Boolean.TRUE.equals(payment.getIsPartial()) ? PaymentStatus.PARTIAL : PaymentStatus.FULL);
+        if (Boolean.TRUE.equals(payment.getIsPartial())) {
+            payment.setStatus(PaymentStatus.PARTIAL);
+        } else {
+            payment.setStatus(PaymentStatus.FULL);
+        }
         payment.setRawExecuteResponse(payment.getRawValidationResponse());
         payment.setRawQueryResponse(payment.getRawValidationResponse());
         paymentRepository.save(payment);
 
+        String successMessage;
+        if (Boolean.TRUE.equals(payment.getIsPartial())) {
+            successMessage = "Booking confirmed. Remaining amount: " + formatAmount(booking.getDueAmount()) + " BDT";
+        } else {
+            successMessage = "Remaining payment successful. Booking fully paid.";
+        }
+
         return buildCallbackResponse(
             "SUCCESS",
-            Boolean.TRUE.equals(payment.getIsPartial())
-                ? "Booking confirmed. Remaining amount: " + formatAmount(booking.getDueAmount()) + " BDT"
-                : "Remaining payment successful. Booking fully paid.",
+            successMessage,
             payment,
             booking
         );
@@ -468,7 +500,12 @@ public class PaymentService {
             payment.setStatus(PaymentStatus.FAILED);
             paymentRepository.save(payment);
         }
-        return new PaymentCallbackResultResponse("FAILED", "Payment failed", transactionId, payment == null ? null : payment.getBookingId());
+        Long bookingId = null;
+        if (payment != null) {
+            bookingId = payment.getBookingId();
+        }
+
+        return new PaymentCallbackResultResponse("FAILED", "Payment failed", transactionId, bookingId);
     }
 
     @Transactional
@@ -479,7 +516,12 @@ public class PaymentService {
             payment.setStatus(PaymentStatus.CANCELLED);
             paymentRepository.save(payment);
         }
-        return new PaymentCallbackResultResponse("CANCELLED", "Payment cancelled", transactionId, payment == null ? null : payment.getBookingId());
+        Long bookingId = null;
+        if (payment != null) {
+            bookingId = payment.getBookingId();
+        }
+
+        return new PaymentCallbackResultResponse("CANCELLED", "Payment cancelled", transactionId, bookingId);
     }
 
     public OwnerEarningsResponse getOwnerEarningsSummary(Long ownerId) {
@@ -494,11 +536,12 @@ public class PaymentService {
     }
 
     public URI buildFrontendRedirectUrl(String status, String transactionId, Long bookingId) {
-        String baseUrl = switch (status) {
-            case "SUCCESS" -> frontendSuccessUrl;
-            case "CANCELLED" -> frontendCancelUrl;
-            default -> frontendFailUrl;
-        };
+        String baseUrl = frontendFailUrl;
+        if ("SUCCESS".equals(status)) {
+            baseUrl = frontendSuccessUrl;
+        } else if ("CANCELLED".equals(status)) {
+            baseUrl = frontendCancelUrl;
+        }
 
         UriComponentsBuilder builder = UriComponentsBuilder.fromUriString(baseUrl);
         if (!isBlank(transactionId)) {
@@ -511,6 +554,7 @@ public class PaymentService {
     }
 
     private Booking ensureConfirmedBooking(Payment payment) {
+        // Reuse existing booking when present, otherwise create one from payment context.
         Booking booking;
         if (payment.getBookingId() != null) {
             booking = bookingRepository.findById(payment.getBookingId())
@@ -527,9 +571,19 @@ public class PaymentService {
 
         booking.setStatus(BookingStatus.CONFIRMED);
 
-        double bookingTotal = roundAmount(payment.getTotalAmount() == null ? payment.getAmount() : payment.getTotalAmount());
-        double paymentPaid = roundAmount(payment.getPaidAmount() == null ? payment.getAmount() : payment.getPaidAmount());
+        double rawBookingTotal = payment.getAmount();
+        if (payment.getTotalAmount() != null) {
+            rawBookingTotal = payment.getTotalAmount();
+        }
+        double bookingTotal = roundAmount(rawBookingTotal);
 
+        double rawPaymentPaid = payment.getAmount();
+        if (payment.getPaidAmount() != null) {
+            rawPaymentPaid = payment.getPaidAmount();
+        }
+        double paymentPaid = roundAmount(rawPaymentPaid);
+
+        // Partial payment sets initial paid/due values; remaining payment merges into prior paid amount.
         if (Boolean.TRUE.equals(payment.getIsPartial())) {
             double dueAmount = roundAmount(Math.max(bookingTotal - paymentPaid, 0));
             booking.setTotalAmount(bookingTotal);
@@ -537,13 +591,20 @@ public class PaymentService {
             booking.setDueAmount(dueAmount);
             booking.setPaymentStatus(PaymentStatus.PARTIAL);
         } else {
-            double existingPaid = booking.getPaidAmount() == null ? 0.0 : booking.getPaidAmount();
+            double existingPaid = 0.0;
+            if (booking.getPaidAmount() != null) {
+                existingPaid = booking.getPaidAmount();
+            }
             double mergedPaid = roundAmount(existingPaid + paymentPaid);
             double dueAmount = roundAmount(Math.max(bookingTotal - mergedPaid, 0));
             booking.setTotalAmount(bookingTotal);
             booking.setPaidAmount(mergedPaid);
             booking.setDueAmount(dueAmount);
-            booking.setPaymentStatus(dueAmount <= 0.009 ? PaymentStatus.FULL : PaymentStatus.PARTIAL);
+            if (dueAmount <= 0.009) {
+                booking.setPaymentStatus(PaymentStatus.FULL);
+            } else {
+                booking.setPaymentStatus(PaymentStatus.PARTIAL);
+            }
         }
 
         bookingRepository.save(booking);
@@ -617,7 +678,14 @@ public class PaymentService {
         }
 
         double paidAmount = parseAmount(getString(validationResponse, "amount"));
-        return amountsMatch(paidAmount, payment.getPaidAmount() == null ? payment.getAmount() : payment.getPaidAmount());
+        double expectedAmount;
+        if (payment.getPaidAmount() == null) {
+            expectedAmount = payment.getAmount();
+        } else {
+            expectedAmount = payment.getPaidAmount();
+        }
+
+        return amountsMatch(paidAmount, expectedAmount);
     }
 
     private boolean hasMinimumRequiredPayment(Payment payment) {
@@ -642,6 +710,11 @@ public class PaymentService {
     }
 
     private PaymentCallbackResultResponse buildCallbackResponse(String status, String message, Payment payment, Booking booking) {
+        String bookingPaymentStatus = null;
+        if (booking.getPaymentStatus() != null) {
+            bookingPaymentStatus = booking.getPaymentStatus().name();
+        }
+
         return new PaymentCallbackResultResponse(
                 status,
                 message,
@@ -650,7 +723,7 @@ public class PaymentService {
                 booking.getTotalAmount(),
                 booking.getPaidAmount(),
                 booking.getDueAmount(),
-                booking.getPaymentStatus() == null ? null : booking.getPaymentStatus().name()
+                bookingPaymentStatus
         );
     }
 
@@ -676,11 +749,18 @@ public class PaymentService {
         if (isBlank(body)) {
             return "HTTP error";
         }
-        return body.length() > 400 ? body.substring(0, 400) : body;
+
+        if (body.length() > 400) {
+            return body.substring(0, 400);
+        }
+        return body;
     }
 
     private String safeValue(String value, String fallback) {
-        return isBlank(value) ? fallback : value;
+        if (isBlank(value)) {
+            return fallback;
+        }
+        return value;
     }
 
     private boolean amountsMatch(double paidAmount, double expectedAmount) {

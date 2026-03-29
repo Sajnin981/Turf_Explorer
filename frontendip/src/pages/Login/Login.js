@@ -4,7 +4,7 @@
 
 import React, { useState } from 'react';
 import { useNavigate, Link } from 'react-router-dom';
-import { login } from '../../services/authService';
+import { login, logout } from '../../services/authService';
 import './Login.css';
 
 const Login = () => {
@@ -15,6 +15,34 @@ const Login = () => {
   const [password, setPassword] = useState('');
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
+
+  function getLoginErrorMessage(err) {
+    if (err && err.response && err.response.data && err.response.data.message) {
+      return err.response.data.message;
+    }
+    return 'Login failed. Please check your credentials.';
+  }
+
+  function getUserTabClass() {
+    if (loginMode === 'user') {
+      return 'tab-button active';
+    }
+    return 'tab-button';
+  }
+
+  function getAdminTabClass() {
+    if (loginMode === 'admin') {
+      return 'tab-button active';
+    }
+    return 'tab-button';
+  }
+
+  function getSubmitButtonText() {
+    if (loading) {
+      return 'Logging in...';
+    }
+    return 'Login';
+  }
 
   async function handleSubmit(event) {
     event.preventDefault();
@@ -32,16 +60,16 @@ const Login = () => {
 
       if (loginMode === 'user' && role === 'admin') {
         setError('Please use Admin Login for admin accounts.');
-        // Clean up stored data since admin authenticated via wrong tab
-        import('../../services/authService').then(m => m.logout());
+        // Keep app state clean when login happens from the wrong tab.
+        logout();
         setLoading(false);
         return;
       }
 
       if (loginMode === 'admin' && role !== 'admin') {
         setError('Access denied. This account does not have admin privileges.');
-        // Clean up stored data since the user logged in but isn't admin
-        import('../../services/authService').then(m => m.logout());
+        // Keep app state clean when login happens from the wrong tab.
+        logout();
         setLoading(false);
         return;
       }
@@ -52,7 +80,7 @@ const Login = () => {
         navigate('/turfs');
       }
     } catch (err) {
-      const msg = err.response?.data?.message || 'Login failed. Please check your credentials.';
+      const msg = getLoginErrorMessage(err);
       setError(msg);
     } finally {
       setLoading(false);
@@ -76,14 +104,14 @@ const Login = () => {
           <div className="login-tabs">
             <button 
               type="button"
-              className={`tab-button ${loginMode === 'user' ? 'active' : ''}`}
+              className={getUserTabClass()}
               onClick={handleSetUserMode}
             >
               👤 User Login
             </button>
             <button 
               type="button"
-              className={`tab-button ${loginMode === 'admin' ? 'active' : ''}`}
+              className={getAdminTabClass()}
               onClick={handleSetAdminMode}
             >
               👨‍💼 Admin Login
@@ -122,7 +150,7 @@ const Login = () => {
             </div>
 
             <button type="submit" className="btn btn-primary auth-btn" disabled={loading}>
-              {loading ? 'Logging in...' : 'Login'}
+              {getSubmitButtonText()}
             </button>
 
             <div className="auth-footer">

@@ -51,12 +51,23 @@ public class SecurityConfig {
 
     @Bean
     public SecurityFilterChain filterChain(HttpSecurity http) throws Exception {
-        http
-            .cors(cors -> cors.disable())
-            .csrf(csrf -> csrf.disable())
-            .sessionManagement(session -> session.sessionCreationPolicy(SessionCreationPolicy.STATELESS))
-            .authenticationProvider(authenticationProvider())
-            .authorizeHttpRequests(auth -> auth
+        configureBasicHttpSecurity(http);
+        configureAuthorizationRules(http);
+
+        http.addFilterBefore(jwtAuthenticationFilter(), UsernamePasswordAuthenticationFilter.class);
+
+        return http.build();
+    }
+
+    private void configureBasicHttpSecurity(HttpSecurity http) throws Exception {
+        http.cors(cors -> cors.disable());
+        http.csrf(csrf -> csrf.disable());
+        http.sessionManagement(session -> session.sessionCreationPolicy(SessionCreationPolicy.STATELESS));
+        http.authenticationProvider(authenticationProvider());
+    }
+
+    private void configureAuthorizationRules(HttpSecurity http) throws Exception {
+        http.authorizeHttpRequests(auth -> auth
                 .requestMatchers("/api/auth/**").permitAll()
                 .requestMatchers("/api/turfs", "/api/turfs/**").permitAll()
                 .requestMatchers("/api/chat").permitAll()
@@ -67,11 +78,7 @@ public class SecurityConfig {
                 .requestMatchers("/api/bookings/**").authenticated()
                 .requestMatchers("/api/payment/**").authenticated()
                 .anyRequest().authenticated()
-            );
-
-        http.addFilterBefore(jwtAuthenticationFilter(), UsernamePasswordAuthenticationFilter.class);
-
-        return http.build();
+        );
     }
 }
 

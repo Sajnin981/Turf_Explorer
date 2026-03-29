@@ -46,7 +46,10 @@ public class AuthService {
         user.setPhone(request.getPhone());
         user.setAddress(request.getAddress());
         // Allow USER or OWNER registration; ADMIN role cannot be self-assigned
-        Role assignedRole = (request.getRole() == Role.OWNER) ? Role.OWNER : Role.USER;
+        Role assignedRole = Role.USER;
+        if (request.getRole() == Role.OWNER) {
+            assignedRole = Role.OWNER;
+        }
         user.setRole(assignedRole);
 
         userRepository.save(user);
