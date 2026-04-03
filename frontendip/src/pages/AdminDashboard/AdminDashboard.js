@@ -13,6 +13,7 @@ const AdminDashboard = () => {
   const [approvedTurfs, setApprovedTurfs] = useState([]);
   const [loading, setLoading] = useState(true);
   const [searchTerm, setSearchTerm] = useState('');
+  const [activeTab, setActiveTab] = useState('pending');
 
   function getApiErrorMessage(err, fallback) {
     if (err && err.response && err.response.data && err.response.data.message) {
@@ -113,11 +114,13 @@ const AdminDashboard = () => {
 
   const filteredPendingTurfs = pendingTurfs.filter(turfMatchesSearch);
   const filteredApprovedTurfs = approvedTurfs.filter(turfMatchesSearch);
+  const isPendingTab = activeTab === 'pending';
+  const activeTurfs = isPendingTab ? filteredPendingTurfs : filteredApprovedTurfs;
 
   if (loading) {
     return (
       <div className="admin-dashboard">
-        <div className="container" style={{ textAlign: 'center', padding: '100px 20px' }}>
+        <div className="admin-dashboard-shell" style={{ textAlign: 'center', padding: '100px 20px' }}>
           <h2>Loading...</h2>
         </div>
       </div>
@@ -126,25 +129,31 @@ const AdminDashboard = () => {
 
   return (
     <div className="admin-dashboard">
-      {/* Header */}
-      <div className="dashboard-header-admin">
-        <div className="header-content">
+      <div className="admin-dashboard-shell">
+        {/* Header */}
+        <div className="dashboard-header-admin">
+          <div className="header-content">
           <h1>Admin Dashboard</h1>
           <p>Manage Turf Submissions</p>
+          </div>
         </div>
-      </div>
 
-      <div className="container">
         {/* Statistics */}
         <div className="dashboard-stats-admin">
-          <div className="stat-card-admin">
+          <div
+            className={`stat-card-admin pending ${isPendingTab ? 'active' : ''}`}
+            onClick={function() { setActiveTab('pending'); }}
+          >
             <div className="stat-icon-admin">⏳</div>
             <div className="stat-info">
               <h3>{pendingTurfs.length}</h3>
               <p>Pending Approval</p>
             </div>
           </div>
-          <div className="stat-card-admin">
+          <div
+            className={`stat-card-admin approved ${!isPendingTab ? 'active' : ''}`}
+            onClick={function() { setActiveTab('approved'); }}
+          >
             <div className="stat-icon-admin" style={{ color: '#2ecc71' }}>✅</div>
             <div className="stat-info">
               <h3>{approvedTurfs.length}</h3>
@@ -164,81 +173,46 @@ const AdminDashboard = () => {
           />
         </div>
 
-        {/* Pending Turfs Section */}
+        {/* Active Turfs Section */}
         <div className="turfs-section">
-          <h2>⏳ Pending Turfs - Awaiting Your Approval</h2>
-
           <div className="turfs-list-admin">
-            {filteredPendingTurfs.map(function(turf) {
+            {activeTurfs.map(function(turf) {
               return (
                 <div key={turf.id} className="turf-card-admin">
-                  <div className="turf-details-admin">
+                  <div className="turf-main-admin">
                     <h3>{turf.name}</h3>
-                    <div className="info-grid">
-                      <p><strong>📍 Location:</strong> {turf.location}</p>
-                      <p><strong>⚽ Type:</strong> {turf.turfType || turf.type}</p>
-                      <p><strong>💰 Price:</strong> ৳{turf.pricePerHour}/hour</p>
-                      {turf.createdAt && (
-                        <p><strong>📅 Submitted:</strong> {new Date(turf.createdAt).toLocaleDateString()}</p>
-                      )}
-                    </div>
+                    <p><strong>📍 Location:</strong> {turf.location}</p>
+                    <p><strong>⚽ Type:</strong> {turf.turfType || turf.type || '-'}</p>
                     {turf.description && (
                       <div className="turf-description">
-                        <strong>Description:</strong> {turf.description}
+                        {turf.description}
                       </div>
                     )}
                   </div>
 
-                  <div className="turf-actions-admin">
-                    <button onClick={function() { handleApprove(turf.id); }} className="btn btn-approve-admin">
-                      ✓ Approve
-                    </button>
-                    <button onClick={function() { handleDecline(turf.id); }} className="btn btn-decline-admin">
-                      ✗ Decline
-                    </button>
+                  <div className="turf-price-admin">
+                    <span className="price-label-admin">Price</span>
+                    <strong>৳{turf.pricePerHour}/hour</strong>
                   </div>
-                </div>
-              );
-            })}
-            {filteredPendingTurfs.length === 0 && (
-              <div className="empty-state">
-                <div className="empty-icon">📭</div>
-                <h3>{getEmptyTitle(Boolean(searchTerm), 'pending')}</h3>
-                <p>{getEmptyDescription(Boolean(searchTerm), 'pending')}</p>
-              </div>
-            )}
-          </div>
-        </div>
 
-        {/* Approved Turfs Section */}
-        <div className="turfs-section">
-          <h2>✅ Approved Turfs - Currently Live on Site</h2>
-
-          <div className="turfs-list-admin">
-            {filteredApprovedTurfs.map(function(turf) {
-              return (
-                <div key={turf.id} className="turf-card-admin approved">
-                  <div className="turf-details-admin">
-                    <h3>{turf.name}</h3>
-                    <div className="info-grid">
-                      <p><strong>📍 Location:</strong> {turf.location}</p>
-                      <p><strong>⚽ Type:</strong> {turf.turfType || turf.type}</p>
-                      <p><strong>💰 Price:</strong> ৳{turf.pricePerHour}/hour</p>
+                  {isPendingTab && (
+                    <div className="turf-actions-admin">
+                      <button onClick={function() { handleApprove(turf.id); }} className="btn btn-approve-admin">
+                        ✓ Approve
+                      </button>
+                      <button onClick={function() { handleDecline(turf.id); }} className="btn btn-decline-admin">
+                        ✗ Decline
+                      </button>
                     </div>
-                    {turf.description && (
-                      <div className="turf-description">
-                        <strong>Description:</strong> {turf.description}
-                      </div>
-                    )}
-                  </div>
+                  )}
                 </div>
               );
             })}
-            {filteredApprovedTurfs.length === 0 && (
+            {activeTurfs.length === 0 && (
               <div className="empty-state">
-                <div className="empty-icon">🏟️</div>
-                <h3>{getEmptyTitle(Boolean(searchTerm), 'approved')}</h3>
-                <p>{getEmptyDescription(Boolean(searchTerm), 'approved')}</p>
+                <div className="empty-icon">{isPendingTab ? '📭' : '🏟️'}</div>
+                <h3>{getEmptyTitle(Boolean(searchTerm), activeTab)}</h3>
+                <p>{getEmptyDescription(Boolean(searchTerm), activeTab)}</p>
               </div>
             )}
           </div>

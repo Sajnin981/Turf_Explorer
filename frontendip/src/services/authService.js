@@ -46,14 +46,6 @@ export function logout() {
   localStorage.removeItem('userProfile');
 }
 
-export function getCurrentUser() {
-  const user = localStorage.getItem('user');
-  if (user) {
-    return JSON.parse(user);
-  }
-  return null;
-}
-
 export function isLoggedIn() {
   const token = localStorage.getItem('token');
   if (token) {

@@ -1,11 +1,21 @@
 /* Hero Section */
 .hero {
   position: relative;
-  min-height: 650px;
+  min-height: 500px;
   display: flex;
   align-items: center;
   background: linear-gradient(135deg, #0f2027 0%, #203a43 50%, #2c5364 100%);
   overflow: hidden;
+  padding: 60px 20px;
+}
+
+.hero .container,
+.how-it-works .container,
+.features-section .container,
+.cta-section .container {
+  width: 100%;
+  max-width: 1200px;
+  margin: 0 auto;
 }
 
 .hero::before {
@@ -120,14 +130,14 @@
 
 /* How It Works Section */
 .how-it-works {
-  padding: 80px 0;
+  padding: 60px 20px;
   background: white;
 }
 
 .steps-grid {
   display: grid;
   grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
-  gap: 20px;
+  gap: 32px;
   margin-top: 50px;
 }
 
@@ -167,8 +177,8 @@
 }
 
 .step-icon {
-  font-size: 4.5rem;
-  margin-bottom: 20px;
+  font-size: 2.5rem;
+  margin-bottom: 16px;
   display: inline-block;
   animation: bounce 2s infinite;
   filter: drop-shadow(0 5px 15px rgba(0, 0, 0, 0.2));
@@ -208,14 +218,14 @@
 
 /* Features Section */
 .features-section {
-  padding: 80px 0;
+  padding: 60px 20px;
   background: linear-gradient(135deg, #e8f5e9, #e3f2fd);
 }
 
 .features-grid {
   display: grid;
   grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
-  gap: 20px;
+  gap: 32px;
   margin-top: 40px;
 }
 
@@ -233,8 +243,8 @@
 }
 
 .feature-icon {
-  font-size: 3rem;
-  margin-bottom: 20px;
+  font-size: 2.5rem;
+  margin-bottom: 16px;
   display: block;
 }
 
@@ -269,7 +279,7 @@
 
 /* CTA Section */
 .cta-section {
-  padding: 80px 0;
+  padding: 60px 20px;
   background: linear-gradient(135deg, var(--primary-green), var(--primary-blue));
   color: white;
 }
@@ -342,7 +352,7 @@
   .ai-feature,
   .top-turfs,
   .cta-section {
-    padding: 50px 0;
+    padding: 50px 20px;
   }
 
   .steps-grid {

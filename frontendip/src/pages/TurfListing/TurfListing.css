@@ -59,11 +59,13 @@
 
 .manual-location-input {
   flex: 1;
-  padding: 14px 16px;
+  height: 44px;
+  padding: 0 16px;
   border: 2px solid #ddd;
-  border-radius: 12px;
+  border-radius: 8px;
   font-size: 1rem;
   transition: border-color 0.2s ease;
+  box-sizing: border-box;
 }
 
 .manual-location-input:focus {
@@ -75,11 +77,13 @@
   background: white;
   color: var(--primary-blue);
   border: 2px solid var(--primary-blue);
-  border-radius: 12px;
-  padding: 12px 20px;
+  border-radius: 8px;
+  height: 44px;
+  padding: 0 20px;
   font-weight: 600;
   cursor: pointer;
   transition: background 0.2s ease, color 0.2s ease;
+  box-sizing: border-box;
 }
 
 .manual-location-button:hover {
@@ -149,15 +153,17 @@
 }
 
 .sort-select {
-  padding: 10px 15px;
+  height: 44px;
+  padding: 0 15px;
   border: 2px solid #ddd;
-  border-radius: 12px;
+  border-radius: 8px;
   font-size: 14px;
   font-weight: 500;
   color: var(--text-dark);
   background: white;
   cursor: pointer;
   transition: border-color 0.3s ease;
+  box-sizing: border-box;
 }
 
 .sort-select:focus {

@@ -4,9 +4,24 @@
   background: #f5f7fa;
 }
 
+.my-turfs-shell {
+  width: 100%;
+  max-width: 1200px;
+  margin: 0 auto;
+}
+
+.my-turfs-content {
+  margin-top: 24px;
+}
+
 .my-turfs-header {
   text-align: center;
-  margin-bottom: 40px;
+  margin-bottom: 0;
+  background: white;
+  border-radius: 12px;
+  padding: 28px 24px;
+  box-shadow: 0 2px 10px rgba(0, 0, 0, 0.06);
+  border: 1px solid #e1e8ed;
 }
 
 .my-turfs-header h1 {
@@ -112,32 +127,27 @@
   margin-bottom: 30px;
 }
 
-.turfs-grid-my {
+.turfs-grid {
   display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(400px, 1fr));
+  grid-template-columns: repeat(auto-fill, minmax(320px, 1fr));
   gap: 20px;
 }
 
 .turf-card-my {
   background: white;
   border-radius: 12px;
-  overflow: hidden;
-  box-shadow: 0 5px 20px rgba(0, 0, 0, 0.1);
+  box-shadow: 0 4px 16px rgba(15, 23, 42, 0.08);
   transition: all 0.3s ease;
-  border: 2px solid transparent;
+  border: 1px solid #e1e8ed;
+  padding: 24px;
+  display: flex;
+  flex-direction: column;
+  height: 100%;
 }
 
 .turf-card-my:hover {
-  transform: translateY(-5px);
-  box-shadow: 0 10px 30px rgba(0, 0, 0, 0.15);
-}
-
-.turf-card-my.approved {
-  border-color: var(--primary-green);
-}
-
-.turf-card-my.pending {
-  border-color: #ffc107;
+  transform: translateY(-3px);
+  box-shadow: 0 8px 20px rgba(15, 23, 42, 0.12);
 }
 
 .turf-status-header {
@@ -152,26 +162,7 @@
   border-radius: 20px;
   font-size: 0.9rem;
   font-weight: 600;
-  margin-bottom: 15px;
-}
-
-.turf-image {
-  width: 100%;
-  height: 200px;
-  overflow: hidden;
-  border-radius: 12px;
-  margin-bottom: 15px;
-}
-
-.turf-image img {
-  width: 100%;
-  height: 100%;
-  object-fit: cover;
-  transition: transform 0.3s ease;
-}
-
-.turf-card:hover .turf-image img {
-  transform: scale(1.05);
+  margin-bottom: 8px;
 }
 
 .status-pending {
@@ -189,96 +180,58 @@
   color: #721c24;
 }
 
-.turf-image-my {
-  width: 100%;
-  height: 200px;
-  overflow: hidden;
+.turf-actions-my {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 8px;
+  margin-top: auto;
+  padding-top: 16px;
+  border-top: 1px solid #eef1f4;
 }
 
-.turf-image-my img {
+.turf-actions-my .btn {
   width: 100%;
-  height: 100%;
-  object-fit: cover;
-}
-
-.no-image-my {
-  width: 100%;
-  height: 100%;
+  padding: 8px 12px;
+  font-size: 0.85rem;
+  border-radius: 6px;
   display: flex;
   align-items: center;
   justify-content: center;
-  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-  font-size: 4rem;
+  gap: 6px;
 }
 
-.turf-details-my {
-  padding: 24px;
+.turf-actions-my .btn-action-primary {
+  background: var(--primary-blue);
+  border: 1px solid var(--primary-blue);
+  color: #ffffff;
 }
 
-.turf-details-my h3 {
-  font-size: 1.5rem;
-  color: var(--text-dark);
-  margin-bottom: 12px;
+.turf-actions-my .btn-action-primary:hover {
+  background: #2c5aa0;
+  border-color: #2c5aa0;
 }
 
-.turf-location-my,
-.turf-type-my,
-.turf-price-my {
-  color: var(--text-light);
-  margin-bottom: 8px;
-  font-size: 0.95rem;
+.turf-actions-my .btn-action-secondary {
+  background: transparent;
+  border: 1px solid #c7d4e5;
+  color: #2c3e50;
 }
 
-.turf-description-my {
-  color: var(--text-light);
-  line-height: 1.6;
-  margin: 15px 0;
-  font-size: 0.95rem;
+.turf-actions-my .btn-action-secondary:hover {
+  background: #eef4fb;
+  border-color: #7da2ce;
 }
 
-.turf-stats-my {
-  display: flex;
-  gap: 15px;
-  margin: 15px 0;
-  padding: 15px;
-  background: #f8f9fa;
-  border-radius: 10px;
+.turf-actions-my .btn-action-danger {
+  background: transparent;
+  border: 1px solid #e74c3c;
+  color: #e74c3c;
 }
 
-.stat-item-my {
-  flex: 1;
-  text-align: center;
-}
-
-.stat-label {
-  display: block;
-  font-size: 0.85rem;
-  color: var(--text-light);
-  margin-bottom: 5px;
-}
-
-.stat-value {
-  display: block;
-  font-size: 1.2rem;
-  font-weight: 700;
-  color: var(--primary-green);
-}
-
-.turf-dates-my {
-  margin: 15px 0;
-  font-size: 0.85rem;
-  color: var(--text-light);
-}
-
-.turf-dates-my p {
-  margin: 5px 0;
-}
-
-.turf-actions-my {
-  margin-top: 20px;
-  display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(140px, 1fr));
-  gap: 10px;
+.turf-actions-my .btn-action-danger:hover {
+  background: #e74c3c;
+  border-color: #e74c3c;
+  color: #ffffff;
 }
 
 .btn-edit {
@@ -634,7 +587,8 @@
 .btn-view-bookings {
   background: var(--primary-blue) !important;
   color: white !important;
-  padding: 12px 20px;
+  padding: 12px 24px;
+  border-radius: 8px;
   flex: 1;
 }
 
@@ -1085,7 +1039,7 @@
 }
 
 @media (max-width: 768px) {
-  .turfs-grid-my, .turfs-grid {
+  .turfs-grid {
     grid-template-columns: 1fr;
   }
   
@@ -1097,11 +1051,6 @@
     font-size: 2rem;
   }
 
-  .turf-stats-my {
-    flex-direction: column;
-    gap: 10px;
-  }
-  
   .turf-stats {
     flex-direction: column;
     gap: 8px;
@@ -1192,6 +1141,7 @@
   position: relative;
   overflow: hidden;
   background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+  border-radius: 10px;
 }
 
 .turf-image-my img {
@@ -1238,24 +1188,58 @@
 }
 
 .turf-content-my {
-  padding: 20px;
+  padding: 16px 0 0;
   flex: 1;
   display: flex;
   flex-direction: column;
 }
 
 .turf-content-my h3 {
-  font-size: 1.3rem;
-  color: var(--text-dark);
-  margin-bottom: 10px;
+  font-size: 1.25rem;
+  color: var(--text-dark, #2c3e50);
+  margin-bottom: 6px;
   font-weight: 700;
 }
 
+.status-pills-row {
+  display: flex;
+  gap: 8px;
+  flex-wrap: wrap;
+  margin-bottom: 10px;
+}
+
+.status-pill {
+  display: inline-block;
+  padding: 4px 12px;
+  border-radius: 999px;
+  font-size: 0.78rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.4px;
+}
+
+.status-pill.pending {
+  background: #fff3cd;
+  color: #8a5a00;
+}
+
+.status-pill.approved,
+.status-pill.available {
+  background: #d4edda;
+  color: #155724;
+}
+
+.status-pill.rejected,
+.status-pill.unavailable,
+.status-pill.closed {
+  background: #f8d7da;
+  color: #721c24;
+}
+
 .turf-content-my .location,
-.turf-content-my .type,
-.turf-content-my .price {
-  font-size: 0.95rem;
-  color: var(--text-light);
+.turf-content-my .type {
+  font-size: 0.9rem;
+  color: var(--text-muted, #555);
   margin-bottom: 8px;
 }
 
@@ -1263,6 +1247,7 @@
   color: var(--primary-green);
   font-weight: 700;
   font-size: 1.1rem;
+  margin-bottom: 8px;
 }
 
 .turf-content-my .description {
@@ -1301,15 +1286,6 @@
   border-radius: 12px;
   font-size: 0.75rem;
   font-weight: 600;
-}
-
-.turf-actions-my {
-  display: grid;
-  grid-template-columns: repeat(2, 1fr);
-  gap: 8px;
-  margin-top: auto;
-  padding-top: 15px;
-  border-top: 2px solid #f0f0f0;
 }
 
 .btn-toggle {
@@ -1388,25 +1364,6 @@
 .btn-delete:hover {
   background: #e74c3c;
   transform: translateY(-2px);
-}
-
-.status-badge {
-  display: inline-block;
-  padding: 8px 16px;
-  border-radius: 20px;
-  font-size: 0.85rem;
-  font-weight: 700;
-  margin: 15px 15px 0;
-}
-
-.status-badge.approved {
-  background: #d4edda;
-  color: #155724;
-}
-
-.status-badge.pending {
-  background: #fff3cd;
-  color: #856404;
 }
 
 /* Edit Modal Styles */
@@ -1665,7 +1622,7 @@
   background: linear-gradient(135deg, #e74c3c 0%, #c0392b 100%);
   color: white;
   border: none;
-  padding: 10px 20px;
+  padding: 12px 24px;
   border-radius: 8px;
   font-weight: 600;
   cursor: pointer;

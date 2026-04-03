@@ -108,7 +108,7 @@ const MyBookings = () => {
   if (loading) {
     return (
       <div className="my-bookings-page">
-        <div className="container" style={{ textAlign: 'center', padding: '100px 20px' }}>
+        <div className="bookings-shell" style={{ textAlign: 'center', padding: '100px 20px' }}>
           <h2>Loading bookings...</h2>
         </div>
       </div>
@@ -117,15 +117,14 @@ const MyBookings = () => {
 
   return (
     <div className="my-bookings-page">
-      {/* Page Header */}
-      <div className="bookings-header">
-        <div className="container">
+      <div className="bookings-shell">
+        {/* Page Header */}
+        <div className="bookings-header">
           <h1>My Bookings</h1>
           <p>View and manage all your turf bookings</p>
         </div>
-      </div>
 
-      <div className="container">
+        <div className="bookings-content">
         {/* Show bookings list */}
         <div className="bookings-list">
           {bookings.map(function(booking) {
@@ -133,47 +132,34 @@ const MyBookings = () => {
             const shouldShowPayNow = shouldShowPayNowButton(booking);
             return (
             <div key={booking.id} className={`booking-card ${statusLower}`}>
-              {/* Status Badge */}
-              <div className={`status-badge-booking ${statusLower}`}>
-                {statusLower === 'confirmed' && '✅ Confirmed'}
-                {statusLower === 'cancelled' && '❌ Cancelled'}
-                {statusLower === 'pending' && '⏳ Pending'}
-              </div>
-
               {/* Booking Info */}
               <div className="booking-info">
                 <h3>{booking.turfName}</h3>
 
                 <div className="booking-details">
-                  {booking.turfLocation && (
-                    <div className="detail-item">
-                      <span className="detail-icon">📍</span>
-                      <span className="detail-label">Location:</span>
-                      <span className="detail-value">{booking.turfLocation}</span>
-                    </div>
-                  )}
+                  <div className="detail-item">
+                    <span className="detail-icon">📍</span>
+                    <span className="detail-label">Location:</span>
+                    <span className="detail-value">{booking.turfLocation || '-'}</span>
+                  </div>
 
                   <div className="detail-item">
                     <span className="detail-icon">📅</span>
                     <span className="detail-label">Date:</span>
-                    <span className="detail-value">{booking.bookingDate}</span>
+                    <span className="detail-value">{booking.bookingDate || '-'}</span>
                   </div>
 
-                  {booking.slotTime && (
-                    <div className="detail-item">
-                      <span className="detail-icon">🕒</span>
-                      <span className="detail-label">Time:</span>
-                      <span className="detail-value">{booking.slotTime}</span>
-                    </div>
-                  )}
+                  <div className="detail-item">
+                    <span className="detail-icon">🕒</span>
+                    <span className="detail-label">Time:</span>
+                    <span className="detail-value">{booking.slotTime || '-'}</span>
+                  </div>
 
-                  {booking.price && (
-                    <div className="detail-item">
-                      <span className="detail-icon">💰</span>
-                      <span className="detail-label">Price:</span>
-                      <span className="detail-value">৳{booking.price}</span>
-                    </div>
-                  )}
+                  <div className="detail-item">
+                    <span className="detail-icon">💰</span>
+                    <span className="detail-label">Price:</span>
+                    <span className="detail-value detail-value-price">{booking.price ? `৳${booking.price}` : '-'}</span>
+                  </div>
 
                   <div className="detail-item">
                     <span className="detail-icon">📋</span>
@@ -234,6 +220,7 @@ const MyBookings = () => {
               </button>
             </div>
           )}
+        </div>
         </div>
       </div>
     </div>

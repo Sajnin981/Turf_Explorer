@@ -1,5 +1,21 @@
 package com.turfexplorer.controller;
 
+import java.util.ArrayList;
+import java.util.Comparator;
+import java.util.List;
+import java.util.Locale;
+import java.util.Map;
+import java.util.UUID;
+import java.util.concurrent.ConcurrentHashMap;
+import java.util.regex.Matcher;
+import java.util.regex.Pattern;
+
+import org.springframework.web.bind.annotation.CrossOrigin;
+import org.springframework.web.bind.annotation.PostMapping;
+import org.springframework.web.bind.annotation.RequestBody;
+import org.springframework.web.bind.annotation.RequestMapping;
+import org.springframework.web.bind.annotation.RestController;
+
 import com.turfexplorer.dto.ChatRequest;
 import com.turfexplorer.entity.Turf;
 import com.turfexplorer.enums.BookingStatus;
@@ -10,21 +26,7 @@ import com.turfexplorer.repository.BookingRepository;
 import com.turfexplorer.repository.TurfRepository;
 import com.turfexplorer.repository.UserRepository;
 import com.turfexplorer.service.DistanceService;
-import org.springframework.web.bind.annotation.CrossOrigin;
-import org.springframework.web.bind.annotation.PostMapping;
-import org.springframework.web.bind.annotation.RequestBody;
-import org.springframework.web.bind.annotation.RequestMapping;
-import org.springframework.web.bind.annotation.RestController;
-
-import java.util.ArrayList;
-import java.util.Comparator;
-import java.util.List;
-import java.util.Locale;
-import java.util.Map;
-import java.util.UUID;
-import java.util.concurrent.ConcurrentHashMap;
-import java.util.regex.Matcher;
-import java.util.regex.Pattern;
+import com.turfexplorer.service.GroqChatService;
 
 @RestController
 @RequestMapping("/api/chat")
@@ -38,6 +40,7 @@ public class ChatController {
     private final TurfRepository turfRepository;
     private final UserRepository userRepository;
     private final DistanceService distanceService;
+    private final GroqChatService groqChatService;
 
     private final Map<String, ChatIntent> lastIntentBySession = new ConcurrentHashMap<>();
 
@@ -45,12 +48,14 @@ public class ChatController {
             BookingRepository bookingRepository,
             TurfRepository turfRepository,
             UserRepository userRepository,
-            DistanceService distanceService
+            DistanceService distanceService,
+            GroqChatService groqChatService
     ) {
         this.bookingRepository = bookingRepository;
         this.turfRepository = turfRepository;
         this.userRepository = userRepository;
         this.distanceService = distanceService;
+        this.groqChatService = groqChatService;
     }
 
     @PostMapping
@@ -180,11 +185,8 @@ public class ChatController {
             return handleFindBestTurf(request, q);
         }
 
-        return Map.of(
-                "reply",
-            "I can help with booking, confirmation, cancel, login/register, owner/admin tasks, pricing, and live stats."
-                        + " Try asking: 'show stats' or 'why booking pending?'."
-        );
+        String aiReply = groqChatService.getAiResponse(message);
+        return Map.of("reply", aiReply);
     }
 
     private ChatIntent detectIntent(String q, String sessionId) {

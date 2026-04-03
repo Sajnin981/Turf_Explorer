@@ -47,18 +47,30 @@ const MyTurfs = () => {
     return status.toLowerCase();
   }
 
-  function getApprovalBadgeClass(statusLabel) {
+  function getApprovalPillClass(statusLabel) {
     if (statusLabel === 'APPROVED') {
-      return 'status-badge approved';
+      return 'status-pill approved';
     }
-    return 'status-badge pending';
+    if (statusLabel === 'REJECTED') {
+      return 'status-pill rejected';
+    }
+    if (statusLabel === 'CLOSED') {
+      return 'status-pill closed';
+    }
+    return 'status-pill pending';
   }
 
-  function getApprovalBadgeText(statusLabel) {
+  function getApprovalPillText(statusLabel) {
     if (statusLabel === 'APPROVED') {
-      return '✅ Approved';
+      return 'Approved';
     }
-    return '⏳ Pending';
+    if (statusLabel === 'REJECTED') {
+      return 'Rejected';
+    }
+    if (statusLabel === 'CLOSED') {
+      return 'Closed';
+    }
+    return 'Pending';
   }
 
   function getSlotPriceLabel(slot) {
@@ -82,18 +94,18 @@ const MyTurfs = () => {
     return '+ Add Slot';
   }
 
-  function getTurfAvailabilityLabel(available) {
+  function getTurfAvailabilityPillText(available) {
     if (available) {
-      return 'Open for Booking';
+      return 'Available';
     }
-    return 'Temporarily Closed';
+    return 'Unavailable';
   }
 
-  function getTurfAvailabilityClass(available) {
+  function getTurfAvailabilityPillClass(available) {
     if (available) {
-      return 'status-badge approved';
+      return 'status-pill available';
     }
-    return 'status-badge pending';
+    return 'status-pill unavailable';
   }
 
   function getToggleAvailabilityButtonLabel(available) {
@@ -280,7 +292,7 @@ const MyTurfs = () => {
   if (loading) {
     return (
       <div className="my-turfs-page">
-        <div className="container" style={{ textAlign: 'center', padding: '100px 20px' }}>
+        <div className="my-turfs-shell" style={{ textAlign: 'center', padding: '100px 20px' }}>
           <h2>Loading your turfs...</h2>
         </div>
       </div>
@@ -289,14 +301,13 @@ const MyTurfs = () => {
 
   return (
     <div className="my-turfs-page">
-      <div className="my-turfs-header">
-        <div className="container">
+      <div className="my-turfs-shell">
+        <div className="my-turfs-header">
           <h1>My Turfs</h1>
           <p>View all your submitted turfs</p>
         </div>
-      </div>
 
-      <div className="container">
+        <div className="my-turfs-content">
         {myTurfs.length === 0 ? (
           <div className="no-turfs">
             <div className="no-turfs-icon">🏟️</div>
@@ -322,13 +333,6 @@ const MyTurfs = () => {
               const hasTurfImage = turfImageUrl !== null;
               return (
                 <div key={turf.id} className="turf-card-my">
-                  <div className={getApprovalBadgeClass(statusLabel)}>
-                    {getApprovalBadgeText(statusLabel)}
-                  </div>
-
-                  <div className={getTurfAvailabilityClass(turf.available)} style={{ marginTop: '8px' }}>
-                    {turf.available ? '✅ ' : '❌ '}{getTurfAvailabilityLabel(turf.available)}
-                  </div>
 
                   <div className="turf-image-my">
                     {hasTurfImage ? (
@@ -351,6 +355,10 @@ const MyTurfs = () => {
 
                   <div className="turf-content-my">
                     <h3>{turf.name}</h3>
+                    <div className="status-pills-row">
+                      <span className={getApprovalPillClass(statusLabel)}>{getApprovalPillText(statusLabel)}</span>
+                      <span className={getTurfAvailabilityPillClass(turf.available)}>{getTurfAvailabilityPillText(turf.available)}</span>
+                    </div>
                     <p className="location">📍 {turf.location}</p>
                     <p className="type">⚽ {turf.type || turf.turfType}</p>
                     <p className="price">💰 ৳{turf.pricePerHour}/hour</p>
@@ -359,25 +367,25 @@ const MyTurfs = () => {
                     <div className="turf-actions-my">
                       <button
                         onClick={function() { setSelectedTurf(turf); setViewingBookings(turf.id); }}
-                        className="btn btn-view-bookings"
+                        className="btn btn-primary btn-action-primary"
                       >
                         📅 View Bookings
                       </button>
                       <button
                         onClick={function() { handleToggleAvailability(turf); }}
-                        className="btn btn-view-bookings"
+                        className="btn btn-action-secondary"
                       >
                         {turf.available ? '🚫 ' : '✅ '}{getToggleAvailabilityButtonLabel(turf.available)}
                       </button>
                       <button
                         onClick={function() { handleToggleManageSlots(turf.id); }}
-                        className="btn btn-view-bookings"
+                        className="btn btn-action-secondary"
                       >
                         🕒 Manage Slots
                       </button>
                       <button
                         onClick={function() { handleDelete(turf.id); }}
-                        className="btn btn-delete-my"
+                        className="btn btn-delete-my btn-action-danger"
                       >
                         🗑️ Delete
                       </button>
@@ -465,6 +473,7 @@ const MyTurfs = () => {
             })}
           </div>
         )}
+        </div>
       </div>
 
       {/* Bookings Modal */}

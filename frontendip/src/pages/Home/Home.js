@@ -105,7 +105,7 @@ const Home = () => {
             <div className="feature-card">
               <span className="feature-icon">🏟️</span>
               <h3>Wide Selection</h3>
-              <p>Choose from multiple turfs across Chittagong</p>
+              <p>Choose from multiple turfs across your area</p>
             </div>
             <div className="feature-card">
               <span className="feature-icon">⏰</span>
@@ -126,7 +126,7 @@ const Home = () => {
           <div className="cta-content">
             <h2 className="cta-title">Ready to Play?</h2>
             <p className="cta-description">
-              Find and book your perfect turf in Chittagong with ease
+              Find and book your perfect turf in your city with ease
             </p>
             <div className="cta-buttons">
               <button onClick={handleGetStarted} className="btn btn-primary">
