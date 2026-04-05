@@ -15,7 +15,7 @@ const Footer = () => {
               <span className="logo-text">Turf Explorer</span>
             </div>
             <p className="footer-description">
-              Your trusted platform for finding and booking the best sports turfs in Chittagong.
+              Your trusted platform for finding and booking the best sports turfs in your area.
             </p>
           </div>
 

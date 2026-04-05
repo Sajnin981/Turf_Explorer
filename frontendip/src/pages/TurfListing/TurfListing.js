@@ -221,7 +221,7 @@ const TurfListing = () => {
       <div className="listing-header">
         <div className="container">
           <h1 className="listing-title">Find Your Perfect Turf</h1>
-          <p className="listing-subtitle">Browse and book sports turfs in Chittagong</p>
+          <p className="listing-subtitle">Browse and book the best sports turfs in your area.</p>
           {sortBy === 'nearest' && hasDistanceData && (
             <div className="distance-indicator">Sorted by nearest first</div>
           )}

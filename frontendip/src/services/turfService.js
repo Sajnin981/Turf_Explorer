@@ -69,18 +69,6 @@ export async function getAllTurfs(params = {}) {
   return normalizedTurfs;
 }
 
-export async function getNearbyTurfs(lat, lng, limit = 20) {
-  const response = await api.get('/turfs/nearby', {
-    params: { lat, lng, limit },
-  });
-  const normalizedTurfs = [];
-  for (const turf of response.data) {
-    normalizedTurfs.push(normalizeTurf(turf));
-  }
-
-  return normalizedTurfs;
-}
-
 export async function getTurfById(id) {
   const response = await api.get(`/turfs/${id}`);
   return normalizeTurf(response.data);

@@ -22,9 +22,9 @@ const TurfCard = ({ turf }) => {
     availabilityClass = 'available';
   }
 
-  let availabilityText = '✗ Unavailable';
+  let availabilityText = 'Unavailable';
   if (turf.available) {
-    availabilityText = '✓ Available';
+    availabilityText = 'Available';
   }
 
   let placeholderDisplay = 'flex';
@@ -63,7 +63,7 @@ const TurfCard = ({ turf }) => {
         
         <div className="turf-meta">
           <span className="turf-type">{"\u26BD"} {turf.type}</span>
-          <span className="turf-price">Tk {pricePerHour}/hr</span>
+          <span className="turf-price">৳{pricePerHour}/hr</span>
         </div>
 
         <div className="turf-status">
