@@ -71,6 +71,8 @@ public class SecurityConfig {
                 .requestMatchers("/api/auth/**").permitAll()
                 .requestMatchers("/api/turfs", "/api/turfs/**").permitAll()
                 .requestMatchers("/api/chat").permitAll()
+            .requestMatchers("/api/payment/webhook").permitAll()
+                .requestMatchers("/api/payment/create-session", "/api/payment/create-checkout-session").authenticated()
                 .requestMatchers("/api/admin/**").hasRole("ADMIN")
                 .requestMatchers("/api/owner/**").hasAnyRole("OWNER", "ADMIN")
                 .requestMatchers("/api/timeslots/**").hasAnyRole("OWNER", "ADMIN")

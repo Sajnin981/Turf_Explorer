@@ -4,7 +4,8 @@
 
 import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { getMyBookings, cancelBooking, confirmBooking } from '../../services/bookingService';
+import { getMyBookings, cancelBooking } from '../../services/bookingService';
+import { createPaymentSession } from '../../services/paymentService';
 import './MyBookings.css';
 
 const MyBookings = () => {
@@ -35,6 +36,11 @@ const MyBookings = () => {
     return status.charAt(0) + status.slice(1).toLowerCase();
   }
 
+  function getPaymentClassName(paymentStatus) {
+    const normalized = (paymentStatus || 'PENDING').toLowerCase();
+    return 'detail-value payment-' + normalized;
+  }
+
   function shouldShowPayNowButton(booking) {
     const paymentStatus = booking.paymentStatus;
     const isAlreadyPaid = paymentStatus === 'PAID';
@@ -51,9 +57,9 @@ const MyBookings = () => {
 
   function getPayButtonText(bookingId) {
     if (payingBookingId === bookingId) {
-      return 'Confirming...';
+      return 'Redirecting...';
     }
-    return 'Pay to Confirm';
+    return 'Pay Now';
   }
 
   useEffect(function() {
@@ -96,10 +102,16 @@ const MyBookings = () => {
   async function handlePayNow(booking) {
     setPayingBookingId(booking.id);
     try {
-      await confirmBooking(booking.id);
-      await loadUserBookings();
+      localStorage.setItem('pendingPaymentBookingId', String(booking.id));
+      const session = await createPaymentSession(booking.id);
+      if (!session || !session.url) {
+        throw new Error('Checkout URL not found');
+      }
+
+      window.location.href = session.url;
     } catch (err) {
-      alert(getErrorMessage(err, 'Failed to confirm booking. Please try again.'));
+      localStorage.removeItem('pendingPaymentBookingId');
+      alert(getErrorMessage(err, 'Failed to start payment. Please try again.'));
     } finally {
       setPayingBookingId(null);
     }
@@ -172,7 +184,7 @@ const MyBookings = () => {
                   <div className="detail-item">
                     <span className="detail-icon">💳</span>
                     <span className="detail-label">Payment:</span>
-                    <span className="detail-value">
+                    <span className={getPaymentClassName(booking.paymentStatus)}>
                       {formatStatusText(booking.paymentStatus)}
                     </span>
                   </div>

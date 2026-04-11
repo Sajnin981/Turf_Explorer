@@ -133,6 +133,17 @@ server.port=8081
    mysql -u your_username -p
    ```
 
+### Stripe Checkout Fails?
+
+Make sure these environment variables are set before starting the backend:
+
+```bash
+STRIPE_SECRET_KEY=sk_test_your_test_key
+FRONTEND_URL=http://localhost:3000
+```
+
+If `STRIPE_SECRET_KEY` is missing or not a test key, checkout session creation will fail with a clear validation message.
+
 ### Application Won't Start?
 
 1. Check Java version:

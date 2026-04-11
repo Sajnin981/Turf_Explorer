@@ -1,0 +1,79 @@
+.payment-result-page {
+  min-height: 60vh;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 40px 20px;
+}
+
+.payment-result-card {
+  width: 100%;
+  max-width: 560px;
+  background: #ffffff;
+  border-radius: 14px;
+  box-shadow: 0 12px 30px rgba(0, 0, 0, 0.1);
+  padding: 36px 30px;
+  text-align: center;
+}
+
+.payment-result-card h1 {
+  margin-bottom: 12px;
+  font-size: 30px;
+}
+
+.payment-result-card p {
+  margin-bottom: 24px;
+  line-height: 1.5;
+}
+
+.payment-session-text {
+  font-size: 0.86rem;
+  color: #5f6a75;
+  word-break: break-all;
+}
+
+.payment-status-text {
+  color: #3b4a59;
+  margin-top: -10px;
+}
+
+.payment-status-box {
+  background: #f6f8fb;
+  border: 1px solid #e2e7ef;
+  border-radius: 10px;
+  padding: 12px 14px;
+  margin-bottom: 18px;
+}
+
+.payment-status-row {
+  display: flex;
+  justify-content: space-between;
+  gap: 20px;
+  padding: 8px 0;
+}
+
+.payment-status-row strong {
+  color: #1c2f44;
+}
+
+.payment-result-card.success h1 {
+  color: #1f8b4c;
+}
+
+.payment-result-card.failed h1 {
+  color: #c0382b;
+}
+
+.payment-result-btn {
+  border: none;
+  background: #2b6bff;
+  color: #fff;
+  padding: 10px 18px;
+  border-radius: 8px;
+  font-weight: 600;
+  cursor: pointer;
+}
+
+.payment-result-btn:hover {
+  background: #1f57d0;
+}

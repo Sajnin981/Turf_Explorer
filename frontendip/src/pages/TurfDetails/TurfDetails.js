@@ -6,6 +6,7 @@ import React, { useState, useEffect } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { getTurfById, getTurfSlots } from '../../services/turfService';
 import { createBooking } from '../../services/bookingService';
+import { createPaymentSession } from '../../services/paymentService';
 import { isLoggedIn as checkLoggedIn, getRole } from '../../services/authService';
 import './TurfDetails.css';
 
@@ -19,6 +20,8 @@ const TurfDetails = () => {
   const [selectedSlot, setSelectedSlot] = useState(null);
   const [loading, setLoading] = useState(true);
   const [bookingLoading, setBookingLoading] = useState(false);
+  const [paymentLoading, setPaymentLoading] = useState(false);
+  const [bookedBooking, setBookedBooking] = useState(null);
   const [error, setError] = useState('');
   const currentRole = getRole();
   const isBookingRestrictedRole = currentRole === 'admin' || currentRole === 'owner';
@@ -89,14 +92,36 @@ const TurfDetails = () => {
 
     setBookingLoading(true);
     try {
-      await createBooking(turf.id, selectedSlot.id, selectedDate);
-      alert(`Booking confirmed!\n\nTurf: ${turf.name}\nDate: ${selectedDate}\nTime: ${selectedSlot.startTime} - ${selectedSlot.endTime}`);
-      navigate('/my-bookings');
+      const createdBooking = await createBooking(turf.id, selectedSlot.id, selectedDate);
+      setBookedBooking(createdBooking);
     } catch (err) {
       const msg = getErrorMessage(err, 'Booking failed. The slot may already be taken.');
       alert(msg);
     } finally {
       setBookingLoading(false);
+    }
+  }
+
+  async function handlePayNow() {
+    if (!bookedBooking || !bookedBooking.id) {
+      alert('Booking information not found. Please open My Bookings and try payment there.');
+      return;
+    }
+
+    setPaymentLoading(true);
+    try {
+      localStorage.setItem('pendingPaymentBookingId', String(bookedBooking.id));
+      const session = await createPaymentSession(bookedBooking.id);
+      if (!session || !session.url) {
+        throw new Error('Checkout URL not found');
+      }
+      window.location.href = session.url;
+    } catch (err) {
+      localStorage.removeItem('pendingPaymentBookingId');
+      const msg = getErrorMessage(err, 'Failed to start payment. Please try again.');
+      alert(msg);
+    } finally {
+      setPaymentLoading(false);
     }
   }
 
@@ -107,10 +132,12 @@ const TurfDetails = () => {
   function handleDateChange(event) {
     setSelectedDate(event.target.value);
     setSelectedSlot(null);
+    setBookedBooking(null);
   }
 
   function handleSlotSelect(slot) {
     setSelectedSlot(slot);
+    setBookedBooking(null);
   }
 
   if (loading) {
@@ -316,10 +343,33 @@ const TurfDetails = () => {
                   <button
                     className="btn btn-primary book-btn"
                     onClick={handleBooking}
-                    disabled={!turf.available || !selectedDate || !selectedSlot || bookingLoading}
+                    disabled={!turf.available || !selectedDate || !selectedSlot || bookingLoading || paymentLoading}
                   >
                     {bookingButtonLabel}
                   </button>
+
+                  {bookedBooking && (
+                    <div className="post-booking-card">
+                      <h3>Booking Created</h3>
+                      <p>Your slot is reserved with pending payment. Complete payment to confirm the booking.</p>
+                      <div className="post-booking-actions">
+                        <button
+                          className="btn btn-primary"
+                          onClick={handlePayNow}
+                          disabled={paymentLoading}
+                        >
+                          {paymentLoading ? 'Redirecting to Stripe...' : 'Pay Now'}
+                        </button>
+                        <button
+                          className="btn btn-secondary"
+                          onClick={function() { navigate('/my-bookings'); }}
+                          disabled={paymentLoading}
+                        >
+                          Pay Later
+                        </button>
+                      </div>
+                    </div>
+                  )}
                 </div>
               </div>
             )}

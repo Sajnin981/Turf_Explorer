@@ -68,6 +68,19 @@ CREATE TABLE bookings (
     INDEX idx_booking_date (booking_date)
 );
 
+-- Transactions Table
+CREATE TABLE transactions (
+    id BIGINT PRIMARY KEY AUTO_INCREMENT,
+    booking_id BIGINT NOT NULL,
+    amount DECIMAL(10, 2) NOT NULL,
+    status ENUM('PENDING', 'SUCCESS', 'FAILED') NOT NULL DEFAULT 'PENDING',
+    stripe_session_id VARCHAR(255) NOT NULL UNIQUE,
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    FOREIGN KEY (booking_id) REFERENCES bookings(id) ON DELETE CASCADE,
+    INDEX idx_transactions_booking (booking_id),
+    INDEX idx_transactions_status (status)
+);
+
 -- Insert Sample Admin User (password: admin123)
 INSERT INTO users (name, email, password, role) VALUES 
 ('Admin User', 'admin@turfexplorer.com', '$2a$10$oxUwEm6ESlh11L0BYgunTeRaUO6jTF9exb8nVaj.cJLQx5xLHWj3e', 'ADMIN');

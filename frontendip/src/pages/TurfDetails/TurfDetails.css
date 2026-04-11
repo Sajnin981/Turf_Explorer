@@ -350,6 +350,48 @@
   transform: none !important;
 }
 
+.post-booking-card {
+  margin-top: 16px;
+  padding: 18px;
+  border-radius: 10px;
+  background: #eef9f1;
+  border: 1px solid #c9e9d1;
+}
+
+.post-booking-card h3 {
+  margin: 0 0 8px;
+  color: #1f8b4c;
+}
+
+.post-booking-card p {
+  margin: 0;
+  color: #2e4a36;
+}
+
+.post-booking-actions {
+  margin-top: 14px;
+  display: flex;
+  gap: 10px;
+  flex-wrap: wrap;
+}
+
+.btn-secondary {
+  padding: 8px 16px;
+  background: #e8edf3;
+  color: #1b2b3a;
+  border: 1px solid #d3dbe4;
+  border-radius: 8px;
+  font-size: 0.88rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.3s;
+  white-space: nowrap;
+}
+
+.btn-secondary:hover {
+  background: #dbe5ef;
+}
+
 /* Responsive */
 @media (max-width: 992px) {
   .details-content {

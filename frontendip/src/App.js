@@ -12,6 +12,8 @@ import AddTurf from './pages/AddTurf/AddTurf';
 import MyTurfs from './pages/MyTurfs/MyTurfs';
 import Profile from './pages/Profile/Profile';
 import MyBookings from './pages/MyBookings/MyBookings';
+import PaymentSuccess from './pages/PaymentSuccess/PaymentSuccess';
+import PaymentFailed from './pages/PaymentFailed/PaymentFailed';
 import { isLoggedIn, isAdmin, isOwner } from './services/authService';
 import './App.css';
 
@@ -61,6 +63,10 @@ function App() {
             <Route path="/my-turfs" element={<PrivateRoute><MyTurfs /></PrivateRoute>} />
             <Route path="/profile" element={<PrivateRoute><Profile /></PrivateRoute>} />
             <Route path="/my-bookings" element={<UserBookingRoute><MyBookings /></UserBookingRoute>} />
+            <Route path="/payment-success" element={<PrivateRoute><PaymentSuccess /></PrivateRoute>} />
+            <Route path="/success" element={<PrivateRoute><PaymentSuccess /></PrivateRoute>} />
+            <Route path="/payment-failed" element={<PrivateRoute><PaymentFailed /></PrivateRoute>} />
+            <Route path="/payment-cancel" element={<PrivateRoute><PaymentFailed /></PrivateRoute>} />
           </Routes>
   
         </main>
