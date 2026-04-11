@@ -4,13 +4,16 @@ import com.turfexplorer.dto.*;
 import com.turfexplorer.entity.Booking;
 import com.turfexplorer.entity.Slot;
 import com.turfexplorer.entity.Turf;
+import com.turfexplorer.entity.Transaction;
 import com.turfexplorer.enums.BookingStatus;
+import com.turfexplorer.enums.TransactionStatus;
 import com.turfexplorer.enums.TurfStatus;
 import com.turfexplorer.exception.BadRequestException;
 import com.turfexplorer.exception.ResourceNotFoundException;
 import com.turfexplorer.repository.BookingRepository;
 import com.turfexplorer.repository.SlotRepository;
 import com.turfexplorer.repository.TurfRepository;
+import com.turfexplorer.repository.TransactionRepository;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -31,6 +34,9 @@ public class OwnerService {
 
     @Autowired
     private BookingRepository bookingRepository;
+
+    @Autowired
+    private TransactionRepository transactionRepository;
 
     public TurfResponse submitTurf(Long userId, TurfRequest request) {
         Turf turf = new Turf();
@@ -256,7 +262,12 @@ public class OwnerService {
         response.setSlotId(booking.getSlotId());
         response.setBookingDate(booking.getBookingDate());
         response.setStatus(booking.getStatus().name());
-        response.setPaymentStatus(booking.getStatus() == BookingStatus.CONFIRMED ? "PAID" : "PENDING");
+        TransactionStatus transactionStatus = transactionRepository
+            .findTopByBookingIdOrderByIdDesc(booking.getId())
+            .map(Transaction::getStatus)
+            .orElse(TransactionStatus.PENDING);
+        response.setTransactionStatus(transactionStatus.name());
+        response.setPaymentStatus(mapPaymentStatus(transactionStatus));
         response.setCreatedAt(booking.getCreatedAt());
 
         if (turf != null) {
@@ -270,5 +281,15 @@ public class OwnerService {
         }
 
         return response;
+    }
+
+    private String mapPaymentStatus(TransactionStatus transactionStatus) {
+        if (transactionStatus == TransactionStatus.SUCCESS) {
+            return "PAID";
+        }
+        if (transactionStatus == TransactionStatus.FAILED) {
+            return "FAILED";
+        }
+        return "PENDING";
     }
 }

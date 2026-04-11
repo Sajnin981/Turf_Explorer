@@ -5,13 +5,18 @@ import com.turfexplorer.dto.BookingResponse;
 import com.turfexplorer.entity.Booking;
 import com.turfexplorer.entity.Slot;
 import com.turfexplorer.entity.Turf;
+import com.turfexplorer.entity.Transaction;
 import com.turfexplorer.enums.BookingStatus;
+import com.turfexplorer.enums.TransactionStatus;
 import com.turfexplorer.enums.TurfStatus;
 import com.turfexplorer.exception.BadRequestException;
 import com.turfexplorer.exception.ResourceNotFoundException;
 import com.turfexplorer.repository.BookingRepository;
 import com.turfexplorer.repository.SlotRepository;
 import com.turfexplorer.repository.TurfRepository;
+import com.turfexplorer.repository.TransactionRepository;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -22,6 +27,8 @@ import java.util.List;
 @Service
 public class BookingService {
 
+    private static final Logger log = LoggerFactory.getLogger(BookingService.class);
+
     @Autowired
     private BookingRepository bookingRepository;
 
@@ -30,6 +37,9 @@ public class BookingService {
 
     @Autowired
     private SlotRepository slotRepository;
+
+    @Autowired
+    private TransactionRepository transactionRepository;
 
     @Transactional
     public BookingResponse createBooking(Long userId, BookingRequest request) {
@@ -101,8 +111,28 @@ public class BookingService {
             throw new BadRequestException("Booking is already cancelled");
         }
 
+        Transaction transactionBeforeCancel = transactionRepository
+            .findTopByBookingIdOrderByIdDesc(booking.getId())
+            .orElse(null);
+
+        String transactionStatusBefore = transactionBeforeCancel != null
+            ? transactionBeforeCancel.getStatus().name()
+            : "NONE";
+
+        log.info("Cancelling bookingId={} currentBookingStatus={} transactionStatusBefore={}",
+            booking.getId(), booking.getStatus(), transactionStatusBefore);
+
         booking.setStatus(BookingStatus.CANCELLED);
         bookingRepository.save(booking);
+
+        String transactionStatusAfter = transactionRepository
+            .findTopByBookingIdOrderByIdDesc(booking.getId())
+            .map(Transaction::getStatus)
+            .map(Enum::name)
+            .orElse("NONE");
+
+        log.info("Booking cancelled bookingId={} newBookingStatus={} transactionStatusAfter={} (unchanged expected)",
+            booking.getId(), booking.getStatus(), transactionStatusAfter);
     }
 
     @Transactional
@@ -145,7 +175,12 @@ public class BookingService {
         response.setSlotId(booking.getSlotId());
         response.setBookingDate(booking.getBookingDate());
         response.setStatus(booking.getStatus().name());
-        response.setPaymentStatus(booking.getStatus() == BookingStatus.CONFIRMED ? "PAID" : "PENDING");
+        TransactionStatus transactionStatus = transactionRepository
+            .findTopByBookingIdOrderByIdDesc(booking.getId())
+            .map(Transaction::getStatus)
+            .orElse(TransactionStatus.PENDING);
+        response.setTransactionStatus(transactionStatus.name());
+        response.setPaymentStatus(mapPaymentStatus(transactionStatus));
         response.setCreatedAt(booking.getCreatedAt());
 
         if (turf != null) {
@@ -159,5 +194,15 @@ public class BookingService {
         }
 
         return response;
+    }
+
+    private String mapPaymentStatus(TransactionStatus transactionStatus) {
+        if (transactionStatus == TransactionStatus.SUCCESS) {
+            return "PAID";
+        }
+        if (transactionStatus == TransactionStatus.FAILED) {
+            return "FAILED";
+        }
+        return "PENDING";
     }
 }

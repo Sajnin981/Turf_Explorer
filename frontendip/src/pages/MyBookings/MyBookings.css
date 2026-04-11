@@ -161,6 +161,11 @@
   font-weight: 600;
 }
 
+.detail-value.payment-failed {
+  color: #dc3545;
+  font-weight: 600;
+}
+
 .detail-value.refund-requested {
   color: #17a2b8;
   font-weight: 600;

@@ -41,8 +41,19 @@ const MyBookings = () => {
     return 'detail-value payment-' + normalized;
   }
 
+  function getPaymentLabelFromTransactionStatus(transactionStatus) {
+    const normalized = (transactionStatus || 'PENDING').toUpperCase();
+    if (normalized === 'SUCCESS') {
+      return 'PAID';
+    }
+    if (normalized === 'FAILED') {
+      return 'FAILED';
+    }
+    return 'PENDING';
+  }
+
   function shouldShowPayNowButton(booking) {
-    const paymentStatus = booking.paymentStatus;
+    const paymentStatus = getPaymentLabelFromTransactionStatus(booking.transactionStatus);
     const isAlreadyPaid = paymentStatus === 'PAID';
     const isCancelled = booking.status === 'CANCELLED';
 
@@ -142,6 +153,7 @@ const MyBookings = () => {
           {bookings.map(function(booking) {
             const statusLower = getStatusLower(booking.status);
             const shouldShowPayNow = shouldShowPayNowButton(booking);
+            const paymentLabel = getPaymentLabelFromTransactionStatus(booking.transactionStatus);
             return (
             <div key={booking.id} className={`booking-card ${statusLower}`}>
               {/* Booking Info */}
@@ -184,8 +196,8 @@ const MyBookings = () => {
                   <div className="detail-item">
                     <span className="detail-icon">💳</span>
                     <span className="detail-label">Payment:</span>
-                    <span className={getPaymentClassName(booking.paymentStatus)}>
-                      {formatStatusText(booking.paymentStatus)}
+                    <span className={getPaymentClassName(paymentLabel)}>
+                      {formatStatusText(paymentLabel)}
                     </span>
                   </div>
 

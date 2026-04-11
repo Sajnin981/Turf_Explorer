@@ -14,6 +14,7 @@ public class BookingResponse {
     private LocalDate bookingDate;
     private String status;
     private String paymentStatus;
+    private String transactionStatus;
     private LocalDateTime createdAt;
     
     // Additional fields for detailed view
