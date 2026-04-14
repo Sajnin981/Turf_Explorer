@@ -2,10 +2,10 @@
 // Purpose: Display all approved turfs with filtering and sorting options
 // Features: Search by turf name, filter by availability, sort by different criteria
 
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { useSearchParams } from 'react-router-dom';
 import TurfCard from '../../components/TurfCard/TurfCard';
-import { getAllTurfs } from '../../services/turfService';
+import { getAllTurfs, getTurfSearchSuggestions } from '../../services/turfService';
 import './TurfListing.css';
 
 const TurfListing = () => {
@@ -21,6 +21,11 @@ const TurfListing = () => {
   const [locationStatus, setLocationStatus] = useState('');
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
+  const [suggestions, setSuggestions] = useState([]);
+  const [showSuggestions, setShowSuggestions] = useState(false);
+  const [activeSuggestionIndex, setActiveSuggestionIndex] = useState(-1);
+
+  const searchContainerRef = useRef(null);
 
   function getInitialSearchStatus(searchValue) {
     if (searchValue) {
@@ -48,6 +53,51 @@ const TurfListing = () => {
     loadTurfs(initialSearch, userCoords, initialStatus, showAvailableOnly);
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [searchParams]);
+
+  useEffect(function() {
+    if (!showSuggestions) {
+      return undefined;
+    }
+
+    function handleClickOutside(event) {
+      if (searchContainerRef.current && !searchContainerRef.current.contains(event.target)) {
+        setShowSuggestions(false);
+        setActiveSuggestionIndex(-1);
+      }
+    }
+
+    document.addEventListener('mousedown', handleClickOutside);
+    return function() {
+      document.removeEventListener('mousedown', handleClickOutside);
+    };
+  }, [showSuggestions]);
+
+  useEffect(function() {
+    const normalizedQuery = (searchQuery || '').trim();
+    if (normalizedQuery.length < 2) {
+      setSuggestions([]);
+      setShowSuggestions(false);
+      setActiveSuggestionIndex(-1);
+      return undefined;
+    }
+
+    const timeoutId = setTimeout(async function() {
+      try {
+        const serverSuggestions = await getTurfSearchSuggestions(normalizedQuery);
+        setSuggestions(serverSuggestions || []);
+        setShowSuggestions(true);
+        setActiveSuggestionIndex(-1);
+      } catch (_ignored) {
+        setSuggestions([]);
+        setShowSuggestions(true);
+        setActiveSuggestionIndex(-1);
+      }
+    }, 300);
+
+    return function() {
+      clearTimeout(timeoutId);
+    };
+  }, [searchQuery]);
 
   function handleLoadedTurfs(turfs) {
     setAllTurfs(turfs);
@@ -181,18 +231,54 @@ const TurfListing = () => {
 
   async function handleNameSearch(overrideQuery) {
     let finalQuery = searchQuery;
-    if (overrideQuery !== undefined && overrideQuery !== null) {
+    if (typeof overrideQuery === 'string') {
       finalQuery = overrideQuery;
     }
 
-    const query = finalQuery.trim();
+    const query = String(finalQuery || '').trim();
     if (!query) {
       await loadTurfs('', userCoords, '', showAvailableOnly);
       return;
     }
 
     const status = `Showing results for "${query}"`;
+    setShowSuggestions(false);
+    setActiveSuggestionIndex(-1);
     await loadTurfs(query, userCoords, status, showAvailableOnly);
+  }
+
+  async function handleSuggestionSelect(suggestionName) {
+    setSearchQuery(suggestionName);
+    setShowSuggestions(false);
+    setActiveSuggestionIndex(-1);
+    await handleNameSearch(suggestionName);
+  }
+
+  function renderSuggestionName(suggestionName) {
+    const normalizedQuery = (searchQuery || '').trim();
+    if (!normalizedQuery) {
+      return suggestionName;
+    }
+
+    const lowerName = suggestionName.toLowerCase();
+    const lowerQuery = normalizedQuery.toLowerCase();
+    const matchIndex = lowerName.indexOf(lowerQuery);
+
+    if (matchIndex < 0) {
+      return suggestionName;
+    }
+
+    const before = suggestionName.slice(0, matchIndex);
+    const matched = suggestionName.slice(matchIndex, matchIndex + normalizedQuery.length);
+    const after = suggestionName.slice(matchIndex + normalizedQuery.length);
+
+    return (
+      <>
+        {before}
+        <strong>{matched}</strong>
+        {after}
+      </>
+    );
   }
 
   if (loading) {
@@ -230,22 +316,95 @@ const TurfListing = () => {
 
       <div className="container">
         <div className="proximity-tools">
-          <div className="manual-location-form">
+          <div className="manual-location-form" ref={searchContainerRef}>
             <input
               type="text"
               className="manual-location-input"
               placeholder="Search by turf name"
               value={searchQuery}
-              onChange={function(event) { setSearchQuery(event.target.value); }}
+              onChange={function(event) {
+                setSearchQuery(event.target.value);
+              }}
+              onFocus={function() {
+                if ((searchQuery || '').trim().length >= 2) {
+                  setShowSuggestions(true);
+                }
+              }}
               onKeyDown={function(event) {
+                if (event.key === 'ArrowDown') {
+                  event.preventDefault();
+                  if (!showSuggestions) {
+                    setShowSuggestions(true);
+                    return;
+                  }
+
+                  setActiveSuggestionIndex(function(prev) {
+                    const next = prev + 1;
+                    if (next >= suggestions.length) {
+                      return 0;
+                    }
+                    return next;
+                  });
+                  return;
+                }
+
+                if (event.key === 'ArrowUp') {
+                  event.preventDefault();
+                  setActiveSuggestionIndex(function(prev) {
+                    const next = prev - 1;
+                    if (next < 0) {
+                      return suggestions.length - 1;
+                    }
+                    return next;
+                  });
+                  return;
+                }
+
                 if (event.key === 'Enter') {
+                  event.preventDefault();
+                  if (showSuggestions && activeSuggestionIndex >= 0 && activeSuggestionIndex < suggestions.length) {
+                    handleSuggestionSelect(suggestions[activeSuggestionIndex].name);
+                    return;
+                  }
                   handleNameSearch();
+                }
+
+                if (event.key === 'Escape') {
+                  setShowSuggestions(false);
+                  setActiveSuggestionIndex(-1);
                 }
               }}
             />
             <button className="manual-location-button" onClick={handleNameSearch}>
               Search
             </button>
+
+            {showSuggestions && (searchQuery || '').trim().length >= 2 && (
+              <div className="search-suggestions-dropdown">
+                {suggestions.length > 0 ? (
+                  suggestions.map(function(suggestion, index) {
+                    const isActive = index === activeSuggestionIndex;
+                    return (
+                      <button
+                        type="button"
+                        key={suggestion.id}
+                        className={isActive ? 'search-suggestion-item active' : 'search-suggestion-item'}
+                        onMouseEnter={function() {
+                          setActiveSuggestionIndex(index);
+                        }}
+                        onClick={function() {
+                          handleSuggestionSelect(suggestion.name);
+                        }}
+                      >
+                        {renderSuggestionName(suggestion.name)}
+                      </button>
+                    );
+                  })
+                ) : (
+                  <div className="search-suggestion-empty">No results found</div>
+                )}
+              </div>
+            )}
           </div>
         </div>
 

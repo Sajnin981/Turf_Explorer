@@ -45,13 +45,8 @@ const Register = () => {
 
     setLoading(true);
     try {
-      const data = await register(name, email, password, phone, address, role);
-      // Redirect owners to their dashboard, regular users to turf listing
-      if (data.role && data.role.toUpperCase() === 'OWNER') {
-        navigate('/my-turfs');
-      } else {
-        navigate('/turfs');
-      }
+      await register(name, email, password, phone, address, role);
+      navigate('/verify-otp', { state: { email } });
     } catch (err) {
       const msg = getRegisterErrorMessage(err);
       setError(msg);

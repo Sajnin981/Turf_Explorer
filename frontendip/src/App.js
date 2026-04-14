@@ -7,6 +7,10 @@ import TurfListing from './pages/TurfListing/TurfListing';
 import TurfDetails from './pages/TurfDetails/TurfDetails';
 import Login from './pages/Login/Login';
 import Register from './pages/Register/Register';
+import OtpVerification from './pages/OtpVerification/OtpVerification';
+import ForgotPassword from './pages/ForgotPassword/ForgotPassword';
+import VerifyResetOtp from './pages/VerifyResetOtp/VerifyResetOtp';
+import ResetPassword from './pages/ResetPassword/ResetPassword';
 import AdminDashboard from './pages/AdminDashboard/AdminDashboard';
 import AddTurf from './pages/AddTurf/AddTurf';
 import MyTurfs from './pages/MyTurfs/MyTurfs';
@@ -48,32 +52,32 @@ function UserBookingRoute({ children }) {
 
 function App() {
   return (
-    
-      <div className="App">
-        <Header />
-        <main className="main-content">
-          <Routes>
-            <Route path="/" element={<Home />} />
-            <Route path="/turfs" element={<TurfListing />} />
-            <Route path="/turf/:id" element={<TurfDetails />} />
-            <Route path="/login" element={<Login />} />
-            <Route path="/register" element={<Register />} />
-            <Route path="/admin" element={<AdminRoute><AdminDashboard /></AdminRoute>} />
-            <Route path="/add-turf" element={<PrivateRoute><AddTurf /></PrivateRoute>} />
-            <Route path="/my-turfs" element={<PrivateRoute><MyTurfs /></PrivateRoute>} />
-            <Route path="/profile" element={<PrivateRoute><Profile /></PrivateRoute>} />
-            <Route path="/my-bookings" element={<UserBookingRoute><MyBookings /></UserBookingRoute>} />
-            <Route path="/payment-success" element={<PrivateRoute><PaymentSuccess /></PrivateRoute>} />
-            <Route path="/success" element={<PrivateRoute><PaymentSuccess /></PrivateRoute>} />
-            <Route path="/payment-failed" element={<PrivateRoute><PaymentFailed /></PrivateRoute>} />
-            <Route path="/payment-cancel" element={<PrivateRoute><PaymentFailed /></PrivateRoute>} />
-          </Routes>
-  
-        </main>
-        <Footer />
-      </div>
-
-    
+    <div className="App">
+      <Header />
+      <main className="main-content">
+        <Routes>
+          <Route path="/" element={<Home />} />
+          <Route path="/turfs" element={<TurfListing />} />
+          <Route path="/turf/:id" element={<TurfDetails />} />
+          <Route path="/login" element={<Login />} />
+          <Route path="/register" element={<Register />} />
+          <Route path="/verify-otp" element={<OtpVerification />} />
+          <Route path="/forgot-password" element={<ForgotPassword />} />
+          <Route path="/verify-reset-otp" element={<VerifyResetOtp />} />
+          <Route path="/reset-password" element={<ResetPassword />} />
+          <Route path="/admin" element={<AdminRoute><AdminDashboard /></AdminRoute>} />
+          <Route path="/add-turf" element={<PrivateRoute><AddTurf /></PrivateRoute>} />
+          <Route path="/my-turfs" element={<PrivateRoute><MyTurfs /></PrivateRoute>} />
+          <Route path="/profile" element={<PrivateRoute><Profile /></PrivateRoute>} />
+          <Route path="/my-bookings" element={<UserBookingRoute><MyBookings /></UserBookingRoute>} />
+          <Route path="/payment-success" element={<PrivateRoute><PaymentSuccess /></PrivateRoute>} />
+          <Route path="/success" element={<PrivateRoute><PaymentSuccess /></PrivateRoute>} />
+          <Route path="/payment-failed" element={<PrivateRoute><PaymentFailed /></PrivateRoute>} />
+          <Route path="/payment-cancel" element={<PrivateRoute><PaymentFailed /></PrivateRoute>} />
+        </Routes>
+      </main>
+      <Footer />
+    </div>
   );
 }
 

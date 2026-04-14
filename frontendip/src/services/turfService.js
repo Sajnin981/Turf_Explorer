@@ -69,6 +69,13 @@ export async function getAllTurfs(params = {}) {
   return normalizedTurfs;
 }
 
+export async function getTurfSearchSuggestions(query) {
+  const response = await api.get('/turfs/search-suggestions', {
+    params: { query },
+  });
+  return response.data;
+}
+
 export async function getTurfById(id) {
   const response = await api.get(`/turfs/${id}`);
   return normalizeTurf(response.data);

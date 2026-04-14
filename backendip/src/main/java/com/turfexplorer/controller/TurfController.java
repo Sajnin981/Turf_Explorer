@@ -2,6 +2,7 @@ package com.turfexplorer.controller;
 
 import com.turfexplorer.dto.SlotResponse;
 import com.turfexplorer.dto.TurfResponse;
+import com.turfexplorer.dto.TurfSuggestionResponse;
 import com.turfexplorer.service.TurfService;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.ResponseEntity;
@@ -23,6 +24,12 @@ public class TurfController {
             @RequestParam(value = "search", required = false) String search,
             @RequestParam(value = "availableOnly", required = false, defaultValue = "false") Boolean availableOnly) {
         return ResponseEntity.ok(turfService.getAllApprovedTurfs(latitude, longitude, search, availableOnly));
+    }
+
+    @GetMapping("/search-suggestions")
+    public ResponseEntity<List<TurfSuggestionResponse>> getSearchSuggestions(
+            @RequestParam(value = "query", required = false) String query) {
+        return ResponseEntity.ok(turfService.getSearchSuggestions(query));
     }
 
     @GetMapping("/nearby")

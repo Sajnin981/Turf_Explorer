@@ -1,6 +1,7 @@
 package com.turfexplorer.service;
 
 import com.turfexplorer.dto.SlotResponse;
+import com.turfexplorer.dto.TurfSuggestionResponse;
 import com.turfexplorer.dto.TurfResponse;
 import com.turfexplorer.entity.Slot;
 import com.turfexplorer.entity.Turf;
@@ -120,6 +121,25 @@ public class TurfService {
         }
 
         return slotResponses;
+    }
+
+    public List<TurfSuggestionResponse> getSearchSuggestions(String query) {
+        if (query == null || query.trim().length() < 2) {
+            return new ArrayList<>();
+        }
+
+        String normalizedQuery = query.trim();
+        List<Turf> matchedTurfs = turfRepository
+                .findTop10ByStatusAndNameContainingIgnoreCaseOrderByNameAsc(TurfStatus.APPROVED, normalizedQuery);
+
+        List<TurfSuggestionResponse> suggestions = new ArrayList<>();
+        for (Turf turf : matchedTurfs) {
+            if (turf != null) {
+                suggestions.add(new TurfSuggestionResponse(turf.getId(), turf.getName()));
+            }
+        }
+
+        return suggestions;
     }
 
     private List<Turf> getApprovedTurfsByName(String search, Boolean availableOnly) {

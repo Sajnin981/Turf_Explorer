@@ -12,6 +12,7 @@ const Header = () => {
   // State variables
   const [isMenuOpen, setIsMenuOpen] = useState(false);  // Mobile menu open/closed
   const [isLoggedIn, setIsLoggedIn] = useState(false);  // User logged in status
+  const [userName, setUserName] = useState('');
   const [userEmail, setUserEmail] = useState('');  // User's email
   const [userRole, setUserRole] = useState('');  // User's role
   const [chatOpen, setChatOpen] = useState(false); // Chatbot state
@@ -21,18 +22,23 @@ const Header = () => {
   // Check login status when page loads or location changes
   useEffect(function() {
     const email = localStorage.getItem('userEmail');
+    const name = localStorage.getItem('userName');
     const loggedIn = localStorage.getItem('isLoggedIn');
     const role = localStorage.getItem('userRole') || '';
     if (email && loggedIn === 'true') {
       setIsLoggedIn(true);
+      setUserName(name || '');
       setUserEmail(email);
       setUserRole(role);
     } else {
       setIsLoggedIn(false);
+      setUserName('');
       setUserEmail('');
       setUserRole('');
     }
   }, [location]);
+
+  const displayName = userName || userEmail;
 
   function isAdmin() {
     return userRole === 'admin';
@@ -46,6 +52,7 @@ const Header = () => {
   function handleLogout() {
     logout();
     setIsLoggedIn(false);
+    setUserName('');
     setUserEmail('');
     setUserRole('');
     alert('Logged out successfully! 👋');
@@ -94,7 +101,7 @@ const Header = () => {
                   My Turfs
                 </Link>
                 <Link to="/profile" className={`nav-link profile-link ${isActive('/profile')}`} onClick={closeMenu}>
-                  👤 {userEmail.split('@')[0]}
+                  👤 {displayName}
                 </Link>
               </>
             )}
@@ -105,7 +112,7 @@ const Header = () => {
                   Bookings
                 </Link>
                 <Link to="/profile" className={`nav-link profile-link ${isActive('/profile')}`} onClick={closeMenu}>
-                  👤 {userEmail.split('@')[0]}
+                  👤 {displayName}
                 </Link>
               </>
             )}

@@ -1,0 +1,4 @@
+ALTER TABLE users
+    ADD COLUMN otp VARCHAR(255) NULL,
+    ADD COLUMN otp_expiry DATETIME NULL,
+    ADD COLUMN is_verified BIT(1) NOT NULL DEFAULT b'0';

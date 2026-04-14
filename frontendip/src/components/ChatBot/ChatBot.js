@@ -114,7 +114,7 @@ function ChatBot({ onClose }) {
 
       // Replace the temporary "..." with actual server reply
       updateLastBotMessage(reply);
-    } catch (error) {
+    } catch (_error) {
       updateLastBotMessage("Error connecting to server.");
     }
   }
@@ -146,7 +146,7 @@ function ChatBot({ onClose }) {
     <div className="chatbot-container">
       <div className="chatbot-header">
         Turf Explorer Assistant
-        <span className="close-btn" onClick={handleCloseClick} style={{cursor: 'pointer'}}>X</span>
+        <span className="close-btn" onClick={handleCloseClick}>X</span>
       </div>
 
       <div className="chatbot-messages">

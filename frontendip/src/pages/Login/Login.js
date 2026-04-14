@@ -153,6 +153,10 @@ const Login = () => {
               {getSubmitButtonText()}
             </button>
 
+            <div className="auth-footer" style={{ marginTop: '12px' }}>
+              <p><Link to="/forgot-password" className="auth-link">Forgot Password?</Link></p>
+            </div>
+
             <div className="auth-footer">
               <p>Don't have an account? <Link to="/register" className="auth-link">Register here</Link></p>
             </div>

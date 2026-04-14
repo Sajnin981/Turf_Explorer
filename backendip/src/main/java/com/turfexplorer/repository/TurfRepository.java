@@ -13,6 +13,7 @@ public interface TurfRepository extends JpaRepository<Turf, Long> {
     List<Turf> findByStatusAndNameContainingIgnoreCase(TurfStatus status, String name);
     List<Turf> findByStatusAndAvailableTrue(TurfStatus status);
     List<Turf> findByStatusAndAvailableTrueAndNameContainingIgnoreCase(TurfStatus status, String name);
+    List<Turf> findTop10ByStatusAndNameContainingIgnoreCaseOrderByNameAsc(TurfStatus status, String name);
     List<Turf> findByOwnerId(Long ownerId);
     List<Turf> findByOwnerIdAndStatus(Long ownerId, TurfStatus status);
     long countByStatus(TurfStatus status);

@@ -2,6 +2,8 @@ package com.turfexplorer.service;
 
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.http.HttpEntity;
 import org.springframework.http.HttpHeaders;
@@ -17,6 +19,8 @@ import java.util.Map;
 
 @Service
 public class GroqChatService {
+
+    private static final Logger logger = LoggerFactory.getLogger(GroqChatService.class);
 
     private static final String GROQ_API_URL = "https://api.groq.com/openai/v1/chat/completions";
     private static final String MODEL = "llama-3.1-8b-instant";
@@ -78,17 +82,17 @@ public class GroqChatService {
 
             return contentNode.asText().trim();
         } catch (HttpStatusCodeException ex) {
-            ex.printStackTrace();
+            logger.error("Groq API request failed", ex);
             String apiError = extractApiErrorMessage(ex.getResponseBodyAsString());
             if (apiError != null) {
                 return "AI Error: " + apiError;
             }
             return "AI Error: Groq request failed with status " + ex.getStatusCode().value() + ".";
         } catch (ResourceAccessException ex) {
-            ex.printStackTrace();
+            logger.error("Network issue while connecting to Groq", ex);
             return "AI Error: Network issue while connecting to Groq.";
         } catch (Exception ex) {
-            ex.printStackTrace();
+            logger.error("Unexpected error while processing Groq response", ex);
             return AI_ERROR_REPLY;
         }
     }

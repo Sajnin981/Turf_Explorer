@@ -32,7 +32,36 @@ export async function login(email, password) {
 
 export async function register(name, email, password, phone, address, role = 'USER') {
   const response = await api.post('/auth/register', { name, email, password, phone, address, role });
-  saveAuthData(response.data);
+  return response.data;
+}
+
+export async function verifyOtp(email, otp) {
+  const response = await api.post('/auth/verify-otp', { email, otp });
+  return response.data;
+}
+
+export async function resendOtp(email) {
+  const response = await api.post('/auth/resend-otp', { email });
+  return response.data;
+}
+
+export async function forgotPassword(email) {
+  const response = await api.post('/auth/forgot-password', { email });
+  return response.data;
+}
+
+export async function verifyResetOtp(email, otp) {
+  const response = await api.post('/auth/verify-reset-otp', { email, otp });
+  return response.data;
+}
+
+export async function resetPassword(email, newPassword) {
+  const response = await api.post('/auth/reset-password', { email, newPassword });
+  return response.data;
+}
+
+export async function resendResetOtp(email) {
+  const response = await api.post('/auth/resend-reset-otp', { email });
   return response.data;
 }
 
