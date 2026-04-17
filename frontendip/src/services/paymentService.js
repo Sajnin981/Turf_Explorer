@@ -1,5 +1,47 @@
 import api from './api';
 
+function extractApiErrorMessage(error, fallbackMessage) {
+  if (error && error.response) {
+    const data = error.response.data;
+
+    if (typeof data === 'string' && data.trim()) {
+      try {
+        const parsed = JSON.parse(data);
+        if (parsed && parsed.message) {
+          return String(parsed.message);
+        }
+      } catch (parseError) {
+        return data;
+      }
+      return data;
+    }
+
+    if (data && typeof data === 'object') {
+      if (data.message && String(data.message).trim()) {
+        return String(data.message);
+      }
+      if (data.error && String(data.error).trim()) {
+        return String(data.error);
+      }
+    }
+
+    const status = error.response.status;
+    const statusText = error.response.statusText;
+    if (status) {
+      return `Request failed (${status}${statusText ? ` ${statusText}` : ''})`;
+    }
+  }
+
+  if (error && error.message && String(error.message).trim()) {
+    if (String(error.message).trim() === 'Network Error') {
+      return 'Cannot connect to backend server. Please ensure backend is running.';
+    }
+    return String(error.message);
+  }
+
+  return fallbackMessage;
+}
+
 export async function createPaymentSession(bookingId) {
   const response = await api.post('/payment/create-bkash-payment', { bookingId });
   return {
@@ -10,6 +52,19 @@ export async function createPaymentSession(bookingId) {
 }
 
 export async function executeBkashPayment(paymentID) {
-  const response = await api.post('/payment/execute-bkash-payment', { paymentID });
-  return response.data;
+  try {
+    const response = await api.post('/payment/execute-bkash-payment', { paymentID });
+    return response.data;
+  } catch (error) {
+    throw new Error(extractApiErrorMessage(error, 'Payment confirmation failed'));
+  }
+}
+
+export async function refundBkashTransaction(transactionId) {
+  try {
+    const response = await api.post(`/payment/refund/${transactionId}`);
+    return response.data;
+  } catch (error) {
+    throw new Error(extractApiErrorMessage(error, 'Refund request failed'));
+  }
 }

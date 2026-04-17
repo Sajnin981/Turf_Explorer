@@ -169,13 +169,20 @@ public class BookingService {
 
     private BookingResponse mapToResponse(Booking booking, Turf turf, Slot slot) {
         BookingResponse response = new BookingResponse();
+        java.util.Optional<Transaction> selectedTransaction = resolveTransactionRecord(booking.getId());
         response.setId(booking.getId());
+        response.setTransactionId(selectedTransaction.map(Transaction::getId).orElse(null));
+        response.setPaymentId(selectedTransaction.map(Transaction::getPaymentId).orElse(null));
+        response.setTrxId(selectedTransaction.map(Transaction::getStripeSessionId).orElse(null));
+        response.setTransactionAmount(selectedTransaction.map(Transaction::getAmount).orElse(null));
         response.setUserId(booking.getUserId());
         response.setTurfId(booking.getTurfId());
         response.setSlotId(booking.getSlotId());
         response.setBookingDate(booking.getBookingDate());
         response.setStatus(booking.getStatus().name());
-        TransactionStatus transactionStatus = resolveTransactionStatus(booking.getId());
+        TransactionStatus transactionStatus = selectedTransaction
+            .map(Transaction::getStatus)
+            .orElse(TransactionStatus.PENDING);
         response.setTransactionStatus(transactionStatus.name());
         response.setPaymentStatus(mapPaymentStatus(transactionStatus));
         response.setCreatedAt(booking.getCreatedAt());
@@ -193,20 +200,24 @@ public class BookingService {
         return response;
     }
 
-    private TransactionStatus resolveTransactionStatus(Long bookingId) {
+    private java.util.Optional<Transaction> resolveTransactionRecord(Long bookingId) {
         return transactionRepository
-            .findFirstByBookingIdAndStatusOrderByIdDesc(bookingId, TransactionStatus.SUCCESS)
-            .map(Transaction::getStatus)
-            .orElseGet(() -> transactionRepository
-                .findFirstByBookingIdAndStatusOrderByIdDesc(bookingId, TransactionStatus.FAILED)
+            .findFirstByBookingIdAndStatusOrderByIdDesc(bookingId, TransactionStatus.REFUNDED)
+            .or(() -> transactionRepository.findFirstByBookingIdAndStatusOrderByIdDesc(bookingId, TransactionStatus.SUCCESS))
+            .or(() -> transactionRepository.findFirstByBookingIdAndStatusOrderByIdDesc(bookingId, TransactionStatus.FAILED))
+            .or(() -> transactionRepository.findTopByBookingIdOrderByIdDesc(bookingId));
+    }
+
+    private TransactionStatus resolveTransactionStatus(Long bookingId) {
+        return resolveTransactionRecord(bookingId)
                 .map(Transaction::getStatus)
-                .orElseGet(() -> transactionRepository
-                    .findTopByBookingIdOrderByIdDesc(bookingId)
-                    .map(Transaction::getStatus)
-                    .orElse(TransactionStatus.PENDING)));
+                .orElse(TransactionStatus.PENDING);
     }
 
     private String mapPaymentStatus(TransactionStatus transactionStatus) {
+        if (transactionStatus == TransactionStatus.REFUNDED) {
+            return "REFUNDED";
+        }
         if (transactionStatus == TransactionStatus.SUCCESS) {
             return "PAID";
         }

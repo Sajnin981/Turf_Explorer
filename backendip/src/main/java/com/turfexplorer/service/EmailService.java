@@ -1,6 +1,8 @@
 package com.turfexplorer.service;
 
+import com.turfexplorer.exception.BadRequestException;
 import org.springframework.beans.factory.annotation.Value;
+import org.springframework.mail.MailException;
 import org.springframework.mail.SimpleMailMessage;
 import org.springframework.mail.javamail.JavaMailSender;
 import org.springframework.stereotype.Service;
@@ -23,7 +25,11 @@ public class EmailService {
         message.setTo(toEmail);
         message.setSubject("Your OTP Code");
         message.setText("Your OTP is: " + otp);
-        mailSender.send(message);
+        try {
+            mailSender.send(message);
+        } catch (MailException ex) {
+            throw new BadRequestException("Unable to send OTP email right now. Please try again shortly.");
+        }
     }
 
     public void sendPasswordResetOtpEmail(String toEmail, String otp) {
@@ -32,6 +38,10 @@ public class EmailService {
         message.setTo(toEmail);
         message.setSubject("Your Password Reset OTP Code");
         message.setText("Your password reset OTP is: " + otp + "\nThis OTP will expire in 5 minutes.");
-        mailSender.send(message);
+        try {
+            mailSender.send(message);
+        } catch (MailException ex) {
+            throw new BadRequestException("Unable to send password reset OTP email right now. Please try again shortly.");
+        }
     }
 }

@@ -8,6 +8,10 @@ import java.time.LocalDateTime;
 @Data
 public class BookingResponse {
     private Long id;
+    private Long transactionId;
+    private String paymentId;
+    private String trxId;
+    private Double transactionAmount;
     private Long userId;
     private Long turfId;
     private Long slotId;

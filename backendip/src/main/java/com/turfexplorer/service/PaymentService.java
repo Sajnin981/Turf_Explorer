@@ -161,6 +161,8 @@ public class PaymentService {
         }
 
         Map<String, Object> response = new HashMap<>();
+        response.put("status", "SUCCESS");
+        response.put("message", "Payment session created successfully");
         response.put("bkashURL", bkashUrl);
         response.put("paymentID", paymentId);
         return response;
@@ -185,7 +187,7 @@ public class PaymentService {
         }
 
         if (transaction.getStatus() == TransactionStatus.SUCCESS) {
-            return buildExecuteResponse(transaction, booking, paymentId, "ALREADY_EXECUTED");
+            return buildExecuteResponse(transaction, booking, paymentId, transaction.getStripeSessionId(), "ALREADY_EXECUTED");
         }
 
         if (booking.getStatus() == BookingStatus.CANCELLED) {
@@ -197,25 +199,190 @@ public class PaymentService {
         String token = grantToken();
         Map<String, Object> executeResponse = executePayment(token, paymentId);
 
-        String transactionStatus = asString(executeResponse.get("transactionStatus"));
+        String paymentStatus = getFirstNonBlank(executeResponse, "paymentStatus", "transactionStatus");
         String statusCode = asString(executeResponse.get("statusCode"));
+        String trxId = getFirstNonBlank(executeResponse, "trxID", "trxId", "trxid");
 
-        if ("Completed".equalsIgnoreCase(transactionStatus) || "0000".equals(statusCode)) {
-            markPaymentSuccess(transaction, booking);
-            return buildExecuteResponse(transaction, booking, paymentId, "SUCCESS");
+        boolean isCompleted = "Completed".equalsIgnoreCase(paymentStatus) || "0000".equals(statusCode);
+        if (!isCompleted) {
+            transaction.setStatus(TransactionStatus.FAILED);
+            transactionRepository.save(transaction);
+
+            String statusMessage = asString(executeResponse.get("statusMessage"));
+            throw new BadRequestException("bKash execute failed: " + (StringUtils.hasText(statusMessage) ? statusMessage : "Payment not completed"));
         }
 
-        transaction.setStatus(TransactionStatus.FAILED);
-        transactionRepository.save(transaction);
+        if (!StringUtils.hasText(trxId)) {
+            trxId = resolveExecuteTrxId(token, paymentId, transaction);
+        }
 
-        String statusMessage = asString(executeResponse.get("statusMessage"));
-        throw new BadRequestException("bKash execute failed: " + (StringUtils.hasText(statusMessage) ? statusMessage : "Payment not completed"));
+        if (!StringUtils.hasText(trxId)) {
+            throw new BadRequestException("bKash execute failed: trxID missing in successful payment response");
+        }
+
+        Transaction existingByTrx = transactionRepository.findByStripeSessionId(trxId).orElse(null);
+        if (existingByTrx != null && !existingByTrx.getId().equals(transaction.getId())) {
+            Booking existingBooking = bookingRepository.findById(existingByTrx.getBookingId()).orElse(booking);
+            if (existingByTrx.getStatus() == TransactionStatus.SUCCESS || existingByTrx.getStatus() == TransactionStatus.REFUNDED) {
+                return buildExecuteResponse(existingByTrx, existingBooking, existingByTrx.getPaymentId(), trxId, "ALREADY_EXECUTED");
+            }
+        }
+
+        transaction.setStripeSessionId(trxId);
+        markPaymentSuccess(transaction, booking);
+        log.info("Transaction saved after execute. transactionId={} bookingId={} paymentID={} trxID={} amount={} status={}",
+                transaction.getId(),
+                booking.getId(),
+                transaction.getPaymentId(),
+                transaction.getStripeSessionId(),
+                transaction.getAmount(),
+                transaction.getStatus());
+
+        return buildExecuteResponse(transaction, booking, paymentId, trxId, "SUCCESS");
     }
 
-    private Map<String, Object> buildExecuteResponse(Transaction transaction, Booking booking, String paymentId, String result) {
+    private Map<String, Object> buildExecuteResponse(Transaction transaction, Booking booking, String paymentId, String trxId, String result) {
         Map<String, Object> response = new HashMap<>();
+        response.put("status", "SUCCESS");
+        response.put("message", "Payment confirmed successfully");
         response.put("result", result);
         response.put("paymentID", paymentId);
+        response.put("trxID", trxId != null ? trxId : transaction.getStripeSessionId());
+        response.put("amount", transaction.getAmount());
+        response.put("transactionStatus", transaction.getStatus().name());
+        response.put("bookingStatus", booking.getStatus().name());
+        return response;
+    }
+
+    @Transactional
+    public Map<String, Object> refundBkashPayment(Long userId, Long transactionId) {
+        validateBkashConfig();
+
+        Transaction transaction = transactionRepository.findById(transactionId)
+            .orElseThrow(() -> new BadRequestException("Invalid refund request"));
+
+        Booking booking = bookingRepository.findById(transaction.getBookingId())
+            .orElseThrow(() -> new BadRequestException("Invalid refund request"));
+
+        if (!booking.getUserId().equals(userId)) {
+            throw new BadRequestException("Invalid refund request");
+        }
+
+        if (transaction.getStatus() == TransactionStatus.REFUNDED) {
+            return buildRefundResponse(transaction, booking, "ALREADY_REFUNDED");
+        }
+
+        if (transaction.getStatus() != TransactionStatus.SUCCESS
+                || booking.getStatus() != BookingStatus.CANCELLED
+                || !StringUtils.hasText(transaction.getPaymentId())) {
+            throw new BadRequestException("Invalid refund request");
+        }
+
+        String token = grantToken();
+        String trxId = resolveRefundTrxId(token, transaction);
+        if (!StringUtils.hasText(trxId)) {
+            throw new BadRequestException("Invalid refund request");
+        }
+
+        log.info("Refund requested. userId={} transactionId={} bookingId={} paymentId={} trxID={} amount={} status={}",
+            userId,
+            transaction.getId(),
+            booking.getId(),
+            transaction.getPaymentId(),
+            trxId,
+            transaction.getAmount(),
+            transaction.getStatus());
+
+        Map<String, Object> refundResponse = refundPayment(token, transaction.getPaymentId(), trxId, transaction.getAmount(), booking.getId());
+
+        String refundStatus = asString(refundResponse.get("transactionStatus"));
+        String statusCode = asString(refundResponse.get("statusCode"));
+        String statusMessage = asString(refundResponse.get("statusMessage"));
+
+        if ("Completed".equalsIgnoreCase(refundStatus) || "0000".equals(statusCode)) {
+            transaction.setStatus(TransactionStatus.REFUNDED);
+            transactionRepository.save(transaction);
+            return buildRefundResponse(transaction, booking, "SUCCESS");
+        }
+
+        if (isAlreadyReversedRefund(statusCode, statusMessage)) {
+            transaction.setStatus(TransactionStatus.REFUNDED);
+            transactionRepository.save(transaction);
+            return buildRefundResponse(transaction, booking, "ALREADY_REFUNDED");
+        }
+
+        // bKash sandbox may intermittently return System Error when an old/stale trxID is provided.
+        // Re-query once and retry with the latest trxID if available.
+        if ("System Error".equalsIgnoreCase(statusMessage)) {
+            String refreshedTrxId = resolveRefundTrxId(token, transaction);
+            if (StringUtils.hasText(refreshedTrxId) && !refreshedTrxId.equals(trxId)) {
+                log.warn("Refund retry with refreshed trxID. transactionId={} oldTrxID={} newTrxID={}",
+                        transaction.getId(),
+                        trxId,
+                        refreshedTrxId);
+
+                Map<String, Object> retryResponse = refundPayment(token, transaction.getPaymentId(), refreshedTrxId, transaction.getAmount(), booking.getId());
+                String retryRefundStatus = asString(retryResponse.get("transactionStatus"));
+                String retryStatusCode = asString(retryResponse.get("statusCode"));
+
+                if ("Completed".equalsIgnoreCase(retryRefundStatus) || "0000".equals(retryStatusCode)) {
+                    transaction.setStatus(TransactionStatus.REFUNDED);
+                    transactionRepository.save(transaction);
+                    return buildRefundResponse(transaction, booking, "SUCCESS");
+                }
+
+                refundResponse = retryResponse;
+                refundStatus = retryRefundStatus;
+                statusCode = retryStatusCode;
+                statusMessage = asString(retryResponse.get("statusMessage"));
+                trxId = refreshedTrxId;
+
+                if (isAlreadyReversedRefund(statusCode, statusMessage)) {
+                    transaction.setStatus(TransactionStatus.REFUNDED);
+                    transactionRepository.save(transaction);
+                    return buildRefundResponse(transaction, booking, "ALREADY_REFUNDED");
+                }
+            }
+        }
+
+        String errorCode = asString(refundResponse.get("errorCode"));
+        log.warn("Refund failed from bKash. transactionId={} paymentId={} trxID={} statusCode={} transactionStatus={} statusMessage={} rawResponse={}",
+                transaction.getId(),
+                transaction.getPaymentId(),
+                trxId,
+                statusCode,
+                refundStatus,
+                statusMessage,
+                refundResponse);
+
+        StringBuilder failureMessage = new StringBuilder("bKash refund failed");
+        if (StringUtils.hasText(statusCode)) {
+            failureMessage.append(" [").append(statusCode).append("]");
+        }
+        if (StringUtils.hasText(errorCode)) {
+            failureMessage.append(" {errorCode=").append(errorCode).append("}");
+        }
+        failureMessage.append(": ").append(StringUtils.hasText(statusMessage) ? statusMessage : "Refund not completed");
+
+        throw new BadRequestException(failureMessage.toString());
+    }
+
+    private boolean isAlreadyReversedRefund(String statusCode, String statusMessage) {
+        if ("2034".equals(statusCode)) {
+            return true;
+        }
+        return StringUtils.hasText(statusMessage)
+                && statusMessage.toLowerCase().contains("has been reversed");
+    }
+
+    private Map<String, Object> buildRefundResponse(Transaction transaction, Booking booking, String result) {
+        Map<String, Object> response = new HashMap<>();
+        response.put("status", "SUCCESS");
+        response.put("message", "Refund processed successfully");
+        response.put("result", result);
+        response.put("transactionId", transaction.getId());
+        response.put("paymentID", transaction.getPaymentId());
+        response.put("trxID", transaction.getStripeSessionId());
         response.put("amount", transaction.getAmount());
         response.put("transactionStatus", transaction.getStatus().name());
         response.put("bookingStatus", booking.getStatus().name());
@@ -295,6 +462,73 @@ public class PaymentService {
         body.put("paymentID", paymentId);
 
         return postForMap(url, headers, body, "execute payment");
+    }
+
+    private Map<String, Object> refundPayment(String idToken, String paymentId, String trxId, Double amount, Long bookingId) {
+        String url = normalizeBaseUrl() + "/checkout/payment/refund";
+
+        HttpHeaders headers = new HttpHeaders();
+        headers.setContentType(MediaType.APPLICATION_JSON);
+        headers.set("Authorization", idToken);
+        headers.set("X-APP-Key", bkashAppKey);
+
+        Map<String, String> body = new HashMap<>();
+        body.put("paymentID", paymentId);
+        body.put("trxID", trxId);
+        body.put("amount", BigDecimal.valueOf(amount).setScale(2, RoundingMode.HALF_UP).toPlainString());
+        body.put("sku", "TurfBooking-" + bookingId);
+        body.put("reason", "Customer cancellation refund");
+
+        return postForMap(url, headers, body, "refund payment");
+    }
+
+    private Map<String, Object> queryPaymentStatus(String idToken, String paymentId) {
+        String url = normalizeBaseUrl() + "/checkout/payment/status";
+
+        HttpHeaders headers = new HttpHeaders();
+        headers.setContentType(MediaType.APPLICATION_JSON);
+        headers.set("Authorization", idToken);
+        headers.set("X-APP-Key", bkashAppKey);
+
+        Map<String, String> body = new HashMap<>();
+        body.put("paymentID", paymentId);
+
+        return postForMap(url, headers, body, "query payment");
+    }
+
+    private String resolveRefundTrxId(String token, Transaction transaction) {
+        String storedTrxId = transaction.getStripeSessionId();
+        String paymentId = transaction.getPaymentId();
+
+        if (StringUtils.hasText(storedTrxId) && !storedTrxId.equals(paymentId)) {
+            return storedTrxId;
+        }
+
+        log.warn("Stored trxID missing or legacy for transactionId={} paymentId={}. Querying bKash payment status.",
+                transaction.getId(),
+                paymentId);
+
+        Map<String, Object> queryResponse = queryPaymentStatus(token, paymentId);
+        String queriedTrxId = getFirstNonBlank(queryResponse, "trxID", "trxId", "trxid");
+
+        if (StringUtils.hasText(queriedTrxId) && !queriedTrxId.equals(paymentId)) {
+            transaction.setStripeSessionId(queriedTrxId);
+            transactionRepository.save(transaction);
+            return queriedTrxId;
+        }
+
+        throw new BadRequestException("Original trxID could not be resolved for this transaction");
+    }
+
+    private String resolveExecuteTrxId(String token, String paymentId, Transaction transaction) {
+        Map<String, Object> queryResponse = queryPaymentStatus(token, paymentId);
+        String queriedTrxId = getFirstNonBlank(queryResponse, "trxID", "trxId", "trxid");
+        if (StringUtils.hasText(queriedTrxId)) {
+            transaction.setStripeSessionId(queriedTrxId);
+            transactionRepository.save(transaction);
+            return queriedTrxId;
+        }
+        return null;
     }
 
     private Map<String, Object> postForMap(String url, HttpHeaders headers, Map<String, String> body, String operation) {
@@ -390,11 +624,8 @@ public class PaymentService {
         boolean hasPaymentColumn = paymentColumnCount != null && paymentColumnCount > 0;
 
         if (!hasStripeColumn && hasPaymentColumn) {
-            log.warn("transactions.stripe_session_id missing; applying compatibility migration from payment_id");
+            log.warn("transactions.stripe_session_id missing; adding nullable compatibility column");
             executeDdlSafely("ALTER TABLE transactions ADD COLUMN stripe_session_id VARCHAR(255) NULL");
-            executeDdlSafely("UPDATE transactions SET stripe_session_id = payment_id WHERE stripe_session_id IS NULL");
-            executeDdlSafely("ALTER TABLE transactions MODIFY stripe_session_id VARCHAR(255) NOT NULL");
-            executeDdlSafely("CREATE UNIQUE INDEX ux_transactions_stripe_session_id ON transactions(stripe_session_id)");
         }
 
         if (hasStripeColumn && !hasPaymentColumn) {

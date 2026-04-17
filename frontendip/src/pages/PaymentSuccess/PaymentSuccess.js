@@ -1,4 +1,4 @@
-import React, { useEffect, useRef, useState } from 'react';
+import React, { useEffect, useState } from 'react';
 import { useNavigate, useSearchParams } from 'react-router-dom';
 import { getMyBookings } from '../../services/bookingService';
 import { executeBkashPayment } from '../../services/paymentService';
@@ -9,12 +9,22 @@ const PaymentSuccess = () => {
   const navigate = useNavigate();
   const [searchParams] = useSearchParams();
   const { showError, showSuccess } = useNotification();
-  const executeStartedRef = useRef(false);
   const [booking, setBooking] = useState(null);
+  const [confirmedBookingStatus, setConfirmedBookingStatus] = useState(null);
   const [loading, setLoading] = useState(true);
   const [confirmationError, setConfirmationError] = useState(null);
   const [confirmationSuccess, setConfirmationSuccess] = useState(false);
   const [paidAmount, setPaidAmount] = useState(null);
+
+  function setErrorState(message) {
+    setConfirmationSuccess(false);
+    setConfirmationError(message);
+  }
+
+  function setSuccessState() {
+    setConfirmationError(null);
+    setConfirmationSuccess(true);
+  }
 
   useEffect(function() {
     let isMounted = true;
@@ -23,6 +33,7 @@ const PaymentSuccess = () => {
       setLoading(true);
       setConfirmationError(null);
       setConfirmationSuccess(false);
+      setConfirmedBookingStatus(null);
 
       try {
         const urlParams = new URLSearchParams(window.location.search);
@@ -33,7 +44,7 @@ const PaymentSuccess = () => {
 
         if (!paymentId) {
           console.error('PaymentSuccess: paymentID is missing from URL');
-          setConfirmationError('Payment ID is missing. Please contact support.');
+          setErrorState('Payment ID is missing. Please contact support.');
           showError('Payment ID is missing. Please contact support.');
           setLoading(false);
           return;
@@ -52,29 +63,47 @@ const PaymentSuccess = () => {
           return;
         }
 
-        if (executeStartedRef.current) {
-          console.log('PaymentSuccess: execution already started for paymentID:', paymentId);
-          return;
-        }
-
-        executeStartedRef.current = true;
+        const executionKey = `payment-execute-${paymentId}`;
+        const executionState = sessionStorage.getItem(executionKey);
 
         // Step 1: Execute payment in backend
-        console.log('PaymentSuccess: Calling backend to execute payment for paymentID:', paymentId);
-        const response = await executeBkashPayment(paymentId);
-        console.log('PaymentSuccess: Backend confirmation payload:', response);
-        setPaidAmount(response && response.amount != null ? Number(response.amount) : null);
-        console.log('PaymentSuccess: Backend confirmation successful');
-        setConfirmationSuccess(true);
-        showSuccess('Payment successful and confirmed.');
+        let response = null;
+        if (executionState === 'success') {
+          console.log('PaymentSuccess: execute already completed for paymentID:', paymentId);
+          setSuccessState();
+        } else if (executionState === 'running') {
+          console.log('PaymentSuccess: execute already running for paymentID:', paymentId);
+          setSuccessState();
+        } else {
+          console.log('PaymentSuccess: Calling backend to execute payment for paymentID:', paymentId);
+          sessionStorage.setItem(executionKey, 'running');
+          response = await executeBkashPayment(paymentId);
+          console.log('PaymentSuccess: Backend confirmation payload:', response);
+          if ((response.status || '').toUpperCase() !== 'SUCCESS') {
+            const message = response.message || 'Payment confirmation failed';
+            sessionStorage.removeItem(executionKey);
+            setErrorState(message);
+            showError(message);
+            setLoading(false);
+            return;
+          }
+          setPaidAmount(response && response.amount != null ? Number(response.amount) : null);
+          if (response && response.bookingStatus) {
+            setConfirmedBookingStatus(String(response.bookingStatus).toUpperCase());
+          }
+          console.log('PaymentSuccess: Backend confirmation successful');
+          sessionStorage.setItem(executionKey, 'success');
+          setSuccessState();
+          showSuccess('Payment successful and confirmed.');
+        }
 
         // Step 2: Load booking from localStorage or fetch all bookings
         console.log('PaymentSuccess: pendingBookingId from localStorage:', pendingBookingId);
 
         if (!pendingBookingId) {
           console.error('PaymentSuccess: pendingPaymentBookingId not found in localStorage');
-          setConfirmationError('Could not identify booking. Please check your bookings.');
-          showError('Could not identify booking. Please check your bookings.');
+          // Payment confirmation already succeeded; booking lookup is optional context.
+          localStorage.removeItem('pendingPaymentBookingId');
           setLoading(false);
           return;
         }
@@ -93,6 +122,8 @@ const PaymentSuccess = () => {
 
         const matchedBooking = bookings.find(function(item) {
           return item.id === bookingId;
+        }) || bookings.find(function(item) {
+          return item.paymentId === paymentId;
         });
 
         if (isMounted) {
@@ -109,19 +140,22 @@ const PaymentSuccess = () => {
             }
           } else {
             console.error('PaymentSuccess: Booking not found in bookings list');
-            setConfirmationError('Could not load booking details.');
-            showError('Could not load booking details.');
+            // Do not show payment error here; payment was already confirmed.
+            showSuccess('Payment confirmed. Booking details will update shortly.');
           }
           setLoading(false);
         }
       } catch (error) {
         console.error('PaymentSuccess: Error during payment confirmation:', error);
         if (isMounted) {
+          const paymentId = new URLSearchParams(window.location.search).get('paymentID');
+          if (paymentId) {
+            sessionStorage.removeItem(`payment-execute-${paymentId}`);
+          }
           const errorMsg = error.response?.data?.message || error.message || 'An error occurred while confirming your payment.';
-          setConfirmationError(errorMsg);
+          setErrorState(errorMsg);
           showError(errorMsg);
           setLoading(false);
-          executeStartedRef.current = false;
         }
       }
     }
@@ -131,7 +165,7 @@ const PaymentSuccess = () => {
     return function() {
       isMounted = false;
     };
-  }, [searchParams, showError, showSuccess]);
+  }, [searchParams, showError, showSuccess, navigate]);
 
   function formatStatus(value) {
     if (!value) {
@@ -158,7 +192,7 @@ const PaymentSuccess = () => {
           </div>
         )}
 
-        {confirmationSuccess && (
+        {confirmationSuccess && !confirmationError && (
           <div style={{ color: 'green', padding: '10px', border: '1px solid green', borderRadius: '4px', marginBottom: '10px' }}>
             <strong>Success:</strong> Payment confirmed with backend
           </div>
@@ -176,9 +210,16 @@ const PaymentSuccess = () => {
               <>
                 <div className="payment-status-row">
                   <span>Booking Status</span>
-                  <strong>{formatStatus(booking.status)}</strong>
+                  <strong>{formatStatus(confirmedBookingStatus || booking.status)}</strong>
                 </div>
               </>
+            )}
+
+            {!booking && confirmedBookingStatus && (
+              <div className="payment-status-row">
+                <span>Booking Status</span>
+                <strong>{formatStatus(confirmedBookingStatus)}</strong>
+              </div>
             )}
           </div>
         )}

@@ -44,8 +44,5 @@ public class Transaction {
         if ((paymentId == null || paymentId.isBlank()) && stripeSessionId != null && !stripeSessionId.isBlank()) {
             paymentId = stripeSessionId;
         }
-        if ((stripeSessionId == null || stripeSessionId.isBlank()) && paymentId != null && !paymentId.isBlank()) {
-            stripeSessionId = paymentId;
-        }
     }
 }
