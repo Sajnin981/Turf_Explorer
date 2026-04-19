@@ -30,7 +30,7 @@ public class TurfRequest {
     @Size(max = 2000, message = "Description must not exceed 2000 characters")
     private String description;
     
-    @Size(max = 2048, message = "Image URL must not exceed 2048 characters")
+    @Size(max = 5000000, message = "Image data must not exceed 5000000 characters")
     private String imageUrl;
 
     private Boolean available;

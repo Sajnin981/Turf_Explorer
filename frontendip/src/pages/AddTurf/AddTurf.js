@@ -25,8 +25,16 @@ const AddTurf = () => {
   const [error, setError] = useState('');
 
   function getSubmitErrorMessage(err) {
-    if (err && err.response && err.response.data && err.response.data.message) {
-      return err.response.data.message;
+    const responseData = err && err.response && err.response.data;
+    if (responseData && responseData.errors && typeof responseData.errors === 'object') {
+      const fieldMessages = Object.values(responseData.errors).filter(Boolean);
+      if (fieldMessages.length > 0) {
+        return fieldMessages.join(' ');
+      }
+    }
+
+    if (responseData && responseData.message) {
+      return responseData.message;
     }
     return 'Failed to submit turf. Please try again.';
   }
