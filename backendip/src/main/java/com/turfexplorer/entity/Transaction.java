@@ -32,17 +32,9 @@ public class Transaction {
     @Column(name = "payment_id", nullable = false, unique = true)
     private String paymentId;
 
-    @Column(name = "stripe_session_id")
-    private String stripeSessionId;
+    @Column(name = "trx_id")
+    private String trxId;
 
     @Column(name = "created_at")
     private LocalDateTime createdAt = LocalDateTime.now();
-
-    @PrePersist
-    @PreUpdate
-    public void syncPaymentColumns() {
-        if ((paymentId == null || paymentId.isBlank()) && stripeSessionId != null && !stripeSessionId.isBlank()) {
-            paymentId = stripeSessionId;
-        }
-    }
 }

@@ -7,15 +7,17 @@
 
 .footer-content {
   display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
-  gap: 20px;
+  grid-template-columns: minmax(0, 1.25fr) minmax(0, 1fr) minmax(0, 1fr);
+  gap: 28px;
   margin-bottom: 40px;
+  align-items: start;
 }
 
 .footer-section {
   display: flex;
   flex-direction: column;
   gap: 20px;
+  align-items: flex-start;
 }
 
 .footer-logo {
@@ -69,6 +71,11 @@
   transform: translateX(5px);
 }
 
+.footer-links a.footer-link-active {
+  color: #ffffff;
+  font-weight: 700;
+}
+
 .footer-contact {
   list-style: none;
   display: flex;
@@ -84,6 +91,17 @@
   border-top: 1px solid rgba(255, 255, 255, 0.1);
   color: #95a5a6;
   font-size: 0.9rem;
+}
+
+@media (max-width: 1024px) {
+  .footer-content {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 24px;
+  }
+
+  .footer-section:first-child {
+    grid-column: 1 / -1;
+  }
 }
 
 /* Responsive */

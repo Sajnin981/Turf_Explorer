@@ -38,7 +38,7 @@ const AddTurf = () => {
     const userRole = localStorage.getItem('userRole');
     
     if (!userEmail || !isLoggedIn) {
-      showInfo('Please login first to add a turf');
+      showInfo('Please log in first to add a turf.');
       navigate('/login');
       return;
     }
@@ -72,10 +72,12 @@ const AddTurf = () => {
         latitude: parseFloat(latitude),
         longitude: parseFloat(longitude)
       });
-      showSuccess('Turf submitted! Your turf is waiting for admin approval.');
+      showSuccess('Turf submitted successfully. Your turf is waiting for admin approval.');
       navigate('/my-turfs');
     } catch (err) {
-      setError(getSubmitErrorMessage(err));
+      const message = getSubmitErrorMessage(err);
+      setError(message);
+      showError(message);
     } finally {
       setLoading(false);
     }
@@ -97,7 +99,7 @@ const AddTurf = () => {
 
   function getSubmitButtonText() {
     if (loading) {
-      return 'Submitting...';
+      return 'Submitting';
     }
     return 'Submit Turf';
   }
@@ -155,7 +157,7 @@ const AddTurf = () => {
         {/* Header */}
         <div className="add-turf-header">
           <h1>🏟️ Add Your Turf</h1>
-          <p>Submit your turf for listing</p>
+          <p>Submit your turf for listing.</p>
         </div>
 
         {/* Simple Form */}

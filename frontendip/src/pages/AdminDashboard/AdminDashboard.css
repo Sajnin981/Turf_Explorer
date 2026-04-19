@@ -1,12 +1,11 @@
 .admin-dashboard {
   min-height: calc(100vh - 70px);
   background: #f5f7fa;
-  padding: 30px 20px;
+  padding: 32px 0;
 }
 
 .admin-dashboard-shell {
   width: 100%;
-  max-width: 1200px;
   margin: 0 auto;
 }
 
@@ -22,19 +21,23 @@
 
 .header-content {
   display: flex;
-  justify-content: space-between;
-  align-items: center;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 12px;
 }
 
 .header-content h1 {
   font-size: 1.8rem;
   color: #2c3e50;
-  margin-bottom: 5px;
+  margin: 0;
+  line-height: 1.2;
 }
 
 .header-content p {
-  color: #7f8c8d;
+  color: #5f6b7a;
   font-size: 0.95rem;
+  margin: 0;
+  line-height: 1.65;
 }
 
 /* Statistics */
@@ -63,6 +66,10 @@
 .stat-card-admin:hover {
   transform: translateY(-3px);
   box-shadow: 0 6px 20px rgba(0, 0, 0, 0.1);
+}
+
+.stat-card-admin:active {
+  transform: translateY(1px) scale(0.98);
 }
 
 .stat-card-admin.active {
@@ -122,7 +129,8 @@
 }
 
 .search-input-admin:focus {
-  border-color: #2ecc71;
+  border-color: var(--primary-blue);
+  box-shadow: 0 0 0 3px rgba(52, 152, 219, 0.18);
 }
 
 .turfs-list-admin {
@@ -161,14 +169,16 @@
 .turf-main-admin h3 {
   font-size: 1.25rem;
   color: var(--text-dark, #2c3e50);
-  margin-bottom: 2px;
+  margin-bottom: 12px;
   font-weight: 700;
+  line-height: 1.25;
 }
 
 .turf-main-admin p {
   margin: 0;
-  color: var(--text-muted, #555);
+  color: #5f6b7a;
   font-size: 0.9rem;
+  line-height: 1.6;
 }
 
 .turf-price-admin {
@@ -197,9 +207,9 @@
   padding: 0;
   background: transparent;
   border-radius: 0;
-  color: var(--text-muted, #555);
+  color: #5f6b7a;
   font-size: 0.88rem;
-  line-height: 1.45;
+  line-height: 1.65;
 }
 
 /* Empty State */
@@ -221,13 +231,15 @@
 .empty-state h3 {
   font-size: 1.25rem;
   color: #2c3e50;
-  margin-bottom: 8px;
+  margin-bottom: 12px;
   font-weight: 700;
+  line-height: 1.25;
 }
 
 .empty-state p {
-  color: #7f8c8d;
+  color: #5f6b7a;
   font-size: 0.95rem;
+  line-height: 1.7;
 }
 
 .turf-actions-admin {
@@ -267,6 +279,10 @@
   box-shadow: 0 5px 15px rgba(46, 204, 113, 0.35);
 }
 
+.btn-approve-admin:active {
+  transform: translateY(1px) scale(0.97);
+}
+
 .btn-decline-admin {
   background: #e74c3c;
   color: white;
@@ -278,6 +294,10 @@
   box-shadow: 0 5px 15px rgba(231, 76, 60, 0.35);
 }
 
+.btn-decline-admin:active {
+  transform: translateY(1px) scale(0.97);
+}
+
 .btn-delete-admin {
   background: #95a5a6;
   color: white;
@@ -287,6 +307,10 @@
   transform: translateY(-2px);
   background: #7f8c8d;
   box-shadow: 0 5px 15px rgba(149, 165, 166, 0.35);
+}
+
+.btn-delete-admin:active {
+  transform: translateY(1px) scale(0.97);
 }
 
 /* Responsive */
@@ -310,6 +334,7 @@
   .header-content {
     flex-direction: column;
     gap: 20px;
+    align-items: center;
     text-align: center;
   }
   

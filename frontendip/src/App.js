@@ -18,6 +18,8 @@ import Profile from './pages/Profile/Profile';
 import MyBookings from './pages/MyBookings/MyBookings';
 import PaymentSuccess from './pages/PaymentSuccess/PaymentSuccess';
 import PaymentFailed from './pages/PaymentFailed/PaymentFailed';
+import NotFound from './pages/NotFound/NotFound';
+import OwnerRoute from './components/OwnerRoute/OwnerRoute';
 import { isLoggedIn, isAdmin, isOwner } from './services/authService';
 import './App.css';
 
@@ -41,10 +43,19 @@ function PrivateRoute({ children }) {
 
 // Redirects to /login if not admin
 function AdminRoute({ children }) {
+  if (!isLoggedIn()) {
+    return <Navigate to="/login" replace />;
+  }
+
   if (isAdmin()) {
     return children;
   }
-  return <Navigate to="/login" replace />;
+
+  if (isOwner()) {
+    return <Navigate to="/my-turfs" replace />;
+  }
+
+  return <Navigate to="/turfs" replace />;
 }
 
 // Redirects admins/owners away from user-only booking page
@@ -55,6 +66,14 @@ function UserBookingRoute({ children }) {
 
   if (!isAdmin() && !isOwner()) {
     return children;
+  }
+
+  if (isAdmin()) {
+    return <Navigate to="/admin" replace />;
+  }
+
+  if (isOwner()) {
+    return <Navigate to="/my-turfs" replace />;
   }
 
   return <Navigate to="/turfs" replace />;
@@ -77,14 +96,15 @@ function App() {
           <Route path="/verify-reset-otp" element={<VerifyResetOtp />} />
           <Route path="/reset-password" element={<ResetPassword />} />
           <Route path="/admin" element={<AdminRoute><AdminDashboard /></AdminRoute>} />
-          <Route path="/add-turf" element={<PrivateRoute><AddTurf /></PrivateRoute>} />
-          <Route path="/my-turfs" element={<PrivateRoute><MyTurfs /></PrivateRoute>} />
+          <Route path="/add-turf" element={<OwnerRoute><AddTurf /></OwnerRoute>} />
+          <Route path="/my-turfs" element={<OwnerRoute><MyTurfs /></OwnerRoute>} />
           <Route path="/profile" element={<PrivateRoute><Profile /></PrivateRoute>} />
           <Route path="/my-bookings" element={<UserBookingRoute><MyBookings /></UserBookingRoute>} />
           <Route path="/payment-success" element={<PrivateRoute><PaymentSuccess /></PrivateRoute>} />
           <Route path="/success" element={<PrivateRoute><PaymentSuccess /></PrivateRoute>} />
           <Route path="/payment-failed" element={<PrivateRoute><PaymentFailed /></PrivateRoute>} />
           <Route path="/payment-cancel" element={<PrivateRoute><PaymentFailed /></PrivateRoute>} />
+          <Route path="*" element={<NotFound />} />
         </Routes>
       </main>
       <Footer />

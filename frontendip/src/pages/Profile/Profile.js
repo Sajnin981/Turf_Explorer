@@ -25,7 +25,7 @@ const Profile = () => {
     const userRole = localStorage.getItem('userRole');
     
     if (!userEmail) {
-      showInfo('Please login first');
+      showInfo('Please log in to continue.');
       navigate('/login');
       return;
     }
@@ -87,7 +87,10 @@ const Profile = () => {
       localStorage.setItem('user', JSON.stringify({ ...userObj, ...profileData }));
       
       setIsEditing(false);
-      showSuccess('Profile updated successfully!');
+      showSuccess('Profile updated successfully.');
+      setTimeout(function() {
+        window.location.reload();
+      }, 300);
     } catch (err) {
       showError('Failed to update profile. Please try again.');
     }
@@ -118,13 +121,13 @@ const Profile = () => {
     <div className="profile-page">
       {/* Page Header */}
       <div className="profile-header">
-        <div className="container">
-          <h1>My Profile</h1>
+        <div className="container page-shell">
+          <h1>Profile Settings</h1>
           <p>Manage your account information</p>
         </div>
       </div>
 
-      <div className="container">
+      <div className="container page-shell">
         <div className="profile-container">
           {/* Profile Card */}
           <div className="profile-card">

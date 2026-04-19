@@ -75,11 +75,12 @@ CREATE TABLE transactions (
     amount DECIMAL(10, 2) NOT NULL,
     status ENUM('PENDING', 'SUCCESS', 'FAILED', 'REFUNDED') NOT NULL DEFAULT 'PENDING',
     payment_id VARCHAR(255) NOT NULL UNIQUE,
-    stripe_session_id VARCHAR(255),
+    trx_id VARCHAR(255),
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
     FOREIGN KEY (booking_id) REFERENCES bookings(id) ON DELETE CASCADE,
     INDEX idx_transactions_booking (booking_id),
-    INDEX idx_transactions_status (status)
+    INDEX idx_transactions_status (status),
+    UNIQUE INDEX ux_transactions_trx_id (trx_id)
 );
 
 -- Insert Sample Admin User (password: admin123)

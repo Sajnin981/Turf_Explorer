@@ -24,6 +24,7 @@ code {
   --primary-blue: #3498db;
   --dark-green: #27ae60;
   --dark-blue: #2980b9;
+  --page-max-width: 1280px;
   --light-gray: #ecf0f1;
   --dark-gray: #34495e;
   --text-dark: #2c3e50;
@@ -38,6 +39,20 @@ button {
   border: none;
   outline: none;
   font-family: inherit;
+  transition: transform 0.14s ease, box-shadow 0.2s ease, filter 0.2s ease, background-color 0.2s ease, border-color 0.2s ease, color 0.2s ease, opacity 0.2s ease;
+}
+
+button:hover:not(:disabled) {
+  filter: brightness(0.97);
+}
+
+button:active:not(:disabled) {
+  transform: translateY(1px) scale(0.97);
+}
+
+button:disabled {
+  cursor: not-allowed;
+  opacity: 0.7;
 }
 
 a {
@@ -47,26 +62,54 @@ a {
 
 input, textarea, select {
   font-family: inherit;
-  border: 1px solid #ddd;
-  border-radius: 12px;
+  border: 1.5px solid #d1d9e6;
+  border-radius: 10px;
   padding: 12px 15px;
   outline: none;
+  transition: border-color 0.2s ease, box-shadow 0.2s ease;
 }
 
 input:focus, textarea:focus, select:focus {
-  border-color: var(--primary-green);
+  border-color: var(--primary-blue);
+  box-shadow: 0 0 0 3px rgba(52, 152, 219, 0.18);
 }
 
 /* Container */
 .container {
-  max-width: 1200px;
+  max-width: var(--page-max-width);
   margin: 0 auto;
-  padding: 0 20px;
+  padding: 0 16px;
+}
+
+.page-shell {
+  width: 100%;
+  max-width: var(--page-max-width);
+  margin: 0 auto;
+  padding-left: 16px;
+  padding-right: 16px;
 }
 
 /* Responsive utilities */
+@media (min-width: 640px) {
+  .container,
+  .page-shell {
+    padding-left: 24px;
+    padding-right: 24px;
+  }
+}
+
+@media (min-width: 1024px) {
+  .container,
+  .page-shell {
+    padding-left: 32px;
+    padding-right: 32px;
+  }
+}
+
 @media (max-width: 768px) {
-  .container {
-    padding: 0 15px;
+  .container,
+  .page-shell {
+    padding-left: 16px;
+    padding-right: 16px;
   }
 }

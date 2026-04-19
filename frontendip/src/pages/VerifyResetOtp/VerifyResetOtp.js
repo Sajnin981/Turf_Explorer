@@ -31,7 +31,7 @@ const VerifyResetOtp = () => {
       resendHandler={handleResend}
       onVerified={handleVerified}
       noEmailMessage="Email not found. Please register again."
-      verifySuccessMessage="OTP verified successfully. Please login to continue."
+      verifySuccessMessage="OTP verified successfully. You can now reset your password."
       resendSuccessMessage="A new OTP has been sent to your email."
     />
   );

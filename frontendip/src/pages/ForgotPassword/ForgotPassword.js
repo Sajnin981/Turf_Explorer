@@ -63,12 +63,12 @@ const ForgotPassword = () => {
             </div>
 
             <button type="submit" className="btn btn-primary auth-btn" disabled={loading}>
-              {loading ? 'Sending OTP...' : 'Send OTP'}
+              {loading ? 'Sending OTP' : 'Send OTP'}
             </button>
           </form>
 
           <div className="auth-footer">
-            <p>Remember your password? <Link to="/login" className="auth-link">Back to login</Link></p>
+            <p>Remember your password? <Link to="/login" className="auth-link">Back To Login</Link></p>
           </div>
         </div>
       </div>

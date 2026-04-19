@@ -1,12 +1,11 @@
 .my-turfs-page {
   min-height: calc(100vh - 70px);
-  padding: 40px 20px;
+  padding: 40px 0;
   background: #f5f7fa;
 }
 
 .my-turfs-shell {
   width: 100%;
-  max-width: 1200px;
   margin: 0 auto;
 }
 
@@ -27,14 +26,16 @@
 .my-turfs-header h1 {
   font-size: 2.5rem;
   color: var(--text-dark);
-  margin-bottom: 10px;
+  margin-bottom: 12px;
   font-weight: 800;
+  line-height: 1.2;
 }
 
 .my-turfs-header p {
-  color: var(--text-light);
+  color: #5f6b7a;
   font-size: 1.1rem;
-  margin-bottom: 20px;
+  margin-bottom: 0;
+  line-height: 1.65;
 }
 
 /* Stats Grid */
@@ -118,24 +119,27 @@
 .no-turfs h2 {
   font-size: 2rem;
   color: var(--text-dark);
-  margin-bottom: 15px;
+  margin-bottom: 12px;
+  line-height: 1.2;
 }
 
 .no-turfs p {
-  color: var(--text-light);
+  color: #5f6b7a;
   font-size: 1.1rem;
   margin-bottom: 30px;
+  line-height: 1.7;
 }
 
 .turfs-grid {
   display: grid;
   grid-template-columns: repeat(auto-fill, minmax(320px, 1fr));
   gap: 20px;
+  align-items: stretch;
 }
 
 .turf-card-my {
   background: white;
-  border-radius: 12px;
+  border-radius: 14px;
   box-shadow: 0 4px 16px rgba(15, 23, 42, 0.08);
   transition: all 0.3s ease;
   border: 1px solid #e1e8ed;
@@ -157,12 +161,16 @@
 }
 
 .status-badge {
-  display: inline-block;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
   padding: 8px 16px;
   border-radius: 20px;
   font-size: 0.9rem;
   font-weight: 600;
   margin-bottom: 8px;
+  line-height: 1;
 }
 
 .status-pending {
@@ -200,6 +208,10 @@
   gap: 6px;
 }
 
+.turf-actions-my .btn:active {
+  transform: translateY(1px) scale(0.97);
+}
+
 .turf-actions-my .btn-action-primary {
   background: var(--primary-blue);
   border: 1px solid var(--primary-blue);
@@ -223,14 +235,14 @@
 }
 
 .turf-actions-my .btn-action-danger {
-  background: transparent;
+  background: #dc2626;
   border: 1px solid #e74c3c;
-  color: #e74c3c;
+  color: #ffffff;
 }
 
 .turf-actions-my .btn-action-danger:hover {
-  background: #e74c3c;
-  border-color: #e74c3c;
+  background: #b91c1c;
+  border-color: #b91c1c;
   color: #ffffff;
 }
 
@@ -253,6 +265,7 @@
   margin: 0;
   color: #856404;
   font-size: 0.9rem;
+  line-height: 1.6;
 }
 
 .turf-edit-form {
@@ -711,12 +724,16 @@
 }
 
 .refund-count-badge {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
   background: #dc3545;
   color: white;
   padding: 6px 14px;
   border-radius: 20px;
   font-size: 0.9rem;
   font-weight: 700;
+  line-height: 1;
   box-shadow: 0 2px 6px rgba(220, 53, 69, 0.4);
   animation: pulse 2s infinite;
 }
@@ -811,6 +828,10 @@
 
 .btn-approve-refund {
   flex: 1;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
   padding: 10px 16px;
   background: #28a745;
   color: white;
@@ -830,6 +851,10 @@
 
 .btn-reject-refund {
   flex: 1;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
   padding: 10px 16px;
   background: #dc3545;
   color: white;
@@ -884,10 +909,14 @@
 }
 
 .status-badge-modal {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
   padding: 6px 16px;
   border-radius: 20px;
   font-size: 0.85rem;
   font-weight: 600;
+  line-height: 1;
 }
 
 .status-badge-modal.status-pending {
@@ -906,10 +935,14 @@
 }
 
 .payment-badge-modal {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
   padding: 6px 16px;
   border-radius: 20px;
   font-size: 0.85rem;
   font-weight: 600;
+  line-height: 1;
 }
 
 .payment-badge-modal.payment-paid {
@@ -1163,9 +1196,13 @@
   justify-content: center;
   font-size: 4rem;
   color: white;
+  opacity: 0.88;
 }
 
 .availability-badge {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
   position: absolute;
   top: 15px;
   right: 15px;
@@ -1173,6 +1210,7 @@
   border-radius: 25px;
   font-size: 0.85rem;
   font-weight: 700;
+  line-height: 1;
   backdrop-filter: blur(10px);
   box-shadow: 0 4px 12px rgba(0, 0, 0, 0.2);
 }
@@ -1197,8 +1235,9 @@
 .turf-content-my h3 {
   font-size: 1.25rem;
   color: var(--text-dark, #2c3e50);
-  margin-bottom: 6px;
+  margin-bottom: 12px;
   font-weight: 700;
+  line-height: 1.25;
 }
 
 .status-pills-row {
@@ -1209,13 +1248,17 @@
 }
 
 .status-pill {
-  display: inline-block;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
   padding: 4px 12px;
   border-radius: 999px;
   font-size: 0.78rem;
   font-weight: 700;
   text-transform: uppercase;
   letter-spacing: 0.4px;
+  line-height: 1;
 }
 
 .status-pill.pending {
@@ -1252,9 +1295,9 @@
 
 .turf-content-my .description {
   font-size: 0.9rem;
-  color: var(--text-light);
+  color: #5f6b7a;
   margin: 12px 0;
-  line-height: 1.5;
+  line-height: 1.65;
   display: -webkit-box;
   -webkit-line-clamp: 2;
   line-clamp: 2;
@@ -1289,6 +1332,10 @@
 }
 
 .btn-toggle {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
   padding: 10px 12px;
   border: none;
   border-radius: 8px;
@@ -1312,6 +1359,10 @@
 .btn-toggle:hover {
   transform: translateY(-2px);
   box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+}
+
+.btn-toggle:active {
+  transform: translateY(1px) scale(0.97);
 }
 
 .btn-edit {

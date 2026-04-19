@@ -7,7 +7,29 @@ export async function createBooking(turfId, slotId, bookingDate) {
 
 export async function getMyBookings() {
   const response = await api.get('/bookings/my-bookings');
-  return response.data;
+  if (!Array.isArray(response.data)) {
+    return [];
+  }
+
+  return response.data.map(function(booking) {
+    const transactionId = booking.transaction && booking.transaction.id
+      ? booking.transaction.id
+      : booking.transactionId;
+
+    const transactionStatus = booking.transaction && booking.transaction.status
+      ? booking.transaction.status
+      : booking.transactionStatus;
+
+    return {
+      ...booking,
+      transactionId: transactionId || null,
+      transactionStatus: transactionStatus || '',
+      transaction: {
+        id: transactionId || null,
+        status: transactionStatus || ''
+      }
+    };
+  });
 }
 
 export async function cancelBooking(bookingId) {

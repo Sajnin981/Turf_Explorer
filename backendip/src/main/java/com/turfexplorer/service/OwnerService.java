@@ -15,6 +15,7 @@ import com.turfexplorer.repository.SlotRepository;
 import com.turfexplorer.repository.TurfRepository;
 import com.turfexplorer.repository.TransactionRepository;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.security.access.AccessDeniedException;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -74,7 +75,7 @@ public class OwnerService {
                 .orElseThrow(() -> new ResourceNotFoundException("Turf not found"));
 
         if (!turf.getOwnerId().equals(userId)) {
-            throw new BadRequestException("You can only delete your own turfs");
+            throw new AccessDeniedException("You can only delete your own turfs");
         }
 
         // Cascade delete associated bookings and slots
@@ -88,7 +89,7 @@ public class OwnerService {
                 .orElseThrow(() -> new ResourceNotFoundException("Turf not found"));
 
         if (!turf.getOwnerId().equals(userId)) {
-            throw new BadRequestException("You can only add slots to your own turfs");
+            throw new AccessDeniedException("You can only add slots to your own turfs");
         }
 
         if (!request.getEndTime().isAfter(request.getStartTime())) {
@@ -115,7 +116,7 @@ public class OwnerService {
                 .orElseThrow(() -> new ResourceNotFoundException("Turf not found"));
 
         if (!turf.getOwnerId().equals(userId)) {
-            throw new BadRequestException("You can only update slots of your own turfs");
+            throw new AccessDeniedException("You can only update slots of your own turfs");
         }
 
         if (!request.getEndTime().isAfter(request.getStartTime())) {
@@ -149,7 +150,7 @@ public class OwnerService {
                 .orElseThrow(() -> new ResourceNotFoundException("Turf not found"));
 
         if (!turf.getOwnerId().equals(userId)) {
-            throw new BadRequestException("You can only delete slots of your own turfs");
+            throw new AccessDeniedException("You can only delete slots of your own turfs");
         }
 
         if (hasActiveBookings(slotId)) {
@@ -194,7 +195,7 @@ public class OwnerService {
                 .orElseThrow(() -> new ResourceNotFoundException("Turf not found"));
 
         if (!turf.getOwnerId().equals(userId)) {
-            throw new BadRequestException("You can only view bookings of your own turfs");
+            throw new AccessDeniedException("You can only view bookings of your own turfs");
         }
 
         List<Booking> turfBookings = bookingRepository.findByTurfId(turfId);
@@ -213,7 +214,7 @@ public class OwnerService {
                 .orElseThrow(() -> new ResourceNotFoundException("Turf not found"));
 
         if (!turf.getOwnerId().equals(userId)) {
-            throw new BadRequestException("You can only update your own turfs");
+            throw new AccessDeniedException("You can only update your own turfs");
         }
 
         if (available == null) {
@@ -260,7 +261,7 @@ public class OwnerService {
         response.setId(booking.getId());
         response.setTransactionId(selectedTransaction.map(Transaction::getId).orElse(null));
         response.setPaymentId(selectedTransaction.map(Transaction::getPaymentId).orElse(null));
-        response.setTrxId(selectedTransaction.map(Transaction::getStripeSessionId).orElse(null));
+        response.setTrxId(selectedTransaction.map(Transaction::getTrxId).orElse(null));
         response.setTransactionAmount(selectedTransaction.map(Transaction::getAmount).orElse(null));
         response.setUserId(booking.getUserId());
         response.setTurfId(booking.getTurfId());

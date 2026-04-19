@@ -61,7 +61,11 @@ const TurfDetails = () => {
           getTurfSlots(id)
         ]);
         setTurf(turfData);
-        setSlots(slotsData);
+        if (Array.isArray(slotsData)) {
+          setSlots(slotsData);
+        } else {
+          setSlots([]);
+        }
       } catch (err) {
         setError('Turf not found or failed to load.');
       } finally {
@@ -75,7 +79,7 @@ const TurfDetails = () => {
 
   async function handleBooking() {
     if (!checkLoggedIn()) {
-      showInfo('Please login first to make a booking');
+      showInfo('Please log in first to make a booking.');
       navigate('/login');
       return;
     }
@@ -84,11 +88,11 @@ const TurfDetails = () => {
       return;
     }
     if (!selectedDate) {
-      showInfo('Please select a date');
+      showInfo('Please select a date.');
       return;
     }
     if (!selectedSlot) {
-      showInfo('Please select a time slot');
+      showInfo('Please select a time slot.');
       return;
     }
 
@@ -98,7 +102,7 @@ const TurfDetails = () => {
       setBookedBooking(createdBooking);
       showSuccess('Booking created successfully. You can proceed to payment.');
     } catch (err) {
-      const msg = getErrorMessage(err, 'Booking failed. The slot may already be taken.');
+      const msg = getErrorMessage(err, 'This time slot is no longer available. Please select another.');
       showError(msg);
     } finally {
       setBookingLoading(false);
@@ -116,12 +120,12 @@ const TurfDetails = () => {
       localStorage.setItem('pendingPaymentBookingId', String(bookedBooking.id));
       const session = await createPaymentSession(bookedBooking.id);
       if (!session || !session.bkashURL) {
-        throw new Error('bKash URL not found');
+        throw new Error('The bKash payment link is unavailable. Please try again.');
       }
       window.location.href = session.bkashURL;
     } catch (err) {
       localStorage.removeItem('pendingPaymentBookingId');
-      const msg = getErrorMessage(err, 'Failed to start payment. Please try again.');
+      const msg = getErrorMessage(err, 'Unable to initiate payment. Please try again.');
       showError(msg);
     } finally {
       setPaymentLoading(false);
@@ -147,19 +151,21 @@ const TurfDetails = () => {
     return (
       <div className="turf-details">
         <div className="container" style={{ textAlign: 'center', padding: '100px 20px' }}>
-          <h2>Loading...</h2>
+          <h2>Loading Turf Details</h2>
         </div>
       </div>
     );
   }
 
   if (error || !turf) {
+    const detailsErrorMessage = error || 'This turf could not be loaded right now.';
     return (
       <div className="turf-details">
         <div className="container" style={{ textAlign: 'center', padding: '100px 20px' }}>
-          <h2 style={{ color: '#e74c3c' }}>{error || 'Turf not found'}</h2>
+          <h2 style={{ color: '#e74c3c' }}>Unable To Load Turf Details</h2>
+          <p>{detailsErrorMessage}</p>
           <button className="btn btn-primary" onClick={handleBackToTurfs} style={{ marginTop: '20px' }}>
-            Back to Turfs
+            Back To Turfs
           </button>
         </div>
       </div>
@@ -184,13 +190,14 @@ const TurfDetails = () => {
   }
 
   let slotSummaryText = 'No slots available';
-  if (slots.length > 0) {
-    slotSummaryText = `${slots.length} slots available`;
+  const safeSlots = Array.isArray(slots) ? slots : [];
+  if (safeSlots.length > 0) {
+    slotSummaryText = `${safeSlots.length} slots available`;
   }
 
   let bookingButtonLabel = 'Confirm Booking';
   if (bookingLoading) {
-    bookingButtonLabel = 'Booking...';
+    bookingButtonLabel = 'Booking In Progress';
   } else if (!turf.available) {
     bookingButtonLabel = 'Currently Unavailable';
   }
@@ -201,7 +208,7 @@ const TurfDetails = () => {
       <div className="details-hero">
         <div className="container">
           <button className="back-btn" onClick={handleBackToTurfs}>
-            {"\u2190"} Back to Turfs
+            {"\u2190"} Back To Turfs
           </button>
         </div>
       </div>
@@ -268,7 +275,7 @@ const TurfDetails = () => {
             </div>
 
             <div className="description">
-              <h3>About this Turf</h3>
+              <h3>About This Turf</h3>
               <p>{turf.description}</p>
             </div>
 
@@ -296,7 +303,7 @@ const TurfDetails = () => {
                     <div className="form-group">
                       <label>Select Time Slot</label>
                       <div className="slots-grid">
-                        {slots.length > 0 ? slots.map(function(slot) {
+                        {safeSlots.length > 0 ? safeSlots.map(function(slot) {
                           const isSelected = selectedSlot && selectedSlot.id === slot.id;
                           return (
                             <button
@@ -361,7 +368,7 @@ const TurfDetails = () => {
                           onClick={handlePayNow}
                           disabled={paymentLoading}
                         >
-                          {paymentLoading ? 'Redirecting to bKash...' : 'Pay Now'}
+                          {paymentLoading ? 'Redirecting To bKash' : 'Pay Now'}
                         </button>
                         <button
                           className="btn btn-secondary"

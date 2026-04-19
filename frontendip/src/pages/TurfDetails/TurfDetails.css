@@ -9,17 +9,22 @@
 }
 
 .back-btn {
-  background: rgba(255, 255, 255, 0.2);
-  color: white;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  background: #e5e7eb;
+  color: #1f2937;
+  border: 1px solid #d1d5db;
   padding: 10px 20px;
   border-radius: 5px;
   font-weight: 600;
+  line-height: 1.2;
   transition: all 0.3s ease;
-  backdrop-filter: blur(10px);
 }
 
 .back-btn:hover {
-  background: rgba(255, 255, 255, 0.3);
+  background: #d1d5db;
   transform: translateX(-5px);
 }
 
@@ -84,10 +89,14 @@
 }
 
 .status {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
   padding: 5px 15px;
   border-radius: 20px;
   font-size: 13px;
   font-weight: 600;
+  line-height: 1;
 }
 
 .status.available {
@@ -136,8 +145,8 @@
 }
 
 .description p {
-  color: var(--text-light);
-  line-height: 1.8;
+  color: #5f6b7a;
+  line-height: 1.75;
   font-size: 1.05rem;
 }
 

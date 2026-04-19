@@ -210,7 +210,7 @@ const SharedOtpVerification = ({
           </div>
 
           <button type="submit" className="btn btn-primary auth-btn shared-otp-primary" disabled={loading || !isOtpComplete}>
-            {loading ? 'Verifying...' : 'Verify OTP'}
+            {loading ? 'Verifying' : 'Verify OTP'}
           </button>
 
           <button
@@ -219,7 +219,7 @@ const SharedOtpVerification = ({
             disabled={resendLoading || resendCountdown > 0}
             onClick={handleResendOtp}
           >
-            {resendLoading ? 'Sending...' : resendCountdown > 0 ? `Resend OTP in ${resendCountdown}s` : 'Resend OTP'}
+            {resendLoading ? 'Sending OTP' : resendCountdown > 0 ? `Resend OTP In ${resendCountdown}s` : 'Resend OTP'}
           </button>
         </form>
       </div>

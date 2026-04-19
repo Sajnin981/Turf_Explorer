@@ -1,4 +1,4 @@
-import React, { createContext, useCallback, useContext, useMemo, useRef, useState } from 'react';
+import React, { createContext, useCallback, useContext, useEffect, useMemo, useRef, useState } from 'react';
 import Notification from '../components/Notification/Notification';
 
 const NotificationContext = createContext(null);
@@ -45,6 +45,20 @@ function NotificationProvider({ children }) {
   const showInfo = useCallback(function(message, durationMs) {
     notify(message, 'info', durationMs);
   }, [notify]);
+
+  useEffect(function() {
+    function handleGlobalNetworkError(event) {
+      const message = event && event.detail && event.detail.message
+        ? event.detail.message
+        : 'We are having trouble connecting right now. Please try again.';
+      showError(message);
+    }
+
+    window.addEventListener('app:network-error', handleGlobalNetworkError);
+    return function() {
+      window.removeEventListener('app:network-error', handleGlobalNetworkError);
+    };
+  }, [showError]);
 
   const value = useMemo(function() {
     return {

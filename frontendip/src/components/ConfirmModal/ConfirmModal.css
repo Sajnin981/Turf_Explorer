@@ -1,21 +1,21 @@
 .confirm-modal-overlay {
   position: fixed;
   inset: 0;
-  background: rgba(0, 0, 0, 0.5);
-  display: flex;
-  align-items: center;
-  justify-content: center;
+  background: rgba(15, 23, 42, 0.55);
+  display: grid;
+  place-items: center;
   z-index: 2100;
   padding: 16px;
+  animation: confirm-overlay-enter 220ms ease-out;
 }
 
 .confirm-modal-box {
   width: min(350px, 100%);
   background: #ffffff;
-  border-radius: 12px;
+  border-radius: 14px;
   padding: 24px;
-  box-shadow: 0 10px 25px rgba(0, 0, 0, 0.2);
-  animation: confirm-modal-enter 180ms ease-out;
+  box-shadow: 0 18px 42px rgba(15, 23, 42, 0.28);
+  animation: confirm-modal-enter 220ms cubic-bezier(0.22, 0.61, 0.36, 1);
 }
 
 .confirm-modal-title {
@@ -41,11 +41,11 @@
 
 .confirm-modal-btn {
   border: none;
-  border-radius: 6px;
+  border-radius: 8px;
   padding: 8px 16px;
   cursor: pointer;
   font-weight: 600;
-  transition: background-color 150ms ease;
+  transition: transform 0.14s ease, box-shadow 0.2s ease, background-color 150ms ease;
 }
 
 .confirm-modal-btn.cancel {
@@ -66,13 +66,26 @@
   background: #dc2626;
 }
 
-@keyframes confirm-modal-enter {
+.confirm-modal-btn:active {
+  transform: translateY(1px) scale(0.97);
+}
+
+@keyframes confirm-overlay-enter {
   from {
     opacity: 0;
-    transform: scale(0.95);
   }
   to {
     opacity: 1;
-    transform: scale(1);
+  }
+}
+
+@keyframes confirm-modal-enter {
+  from {
+    opacity: 0;
+    transform: translateY(8px) scale(0.96);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0) scale(1);
   }
 }

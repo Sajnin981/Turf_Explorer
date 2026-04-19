@@ -20,8 +20,10 @@ public class TransactionSchemaCompatibilityInitializer {
                 return;
             }
 
-            ensureStripeSessionIdColumnExists();
-            ensureStripeSessionIdIsNullable();
+            ensureTrxIdColumnExists();
+            backfillTrxIdFromLegacyStripeColumn();
+            ensureTrxIdIndex();
+            dropLegacyStripeSessionIdColumn();
             ensureRefundedStatusExists();
         } catch (Exception ex) {
             // Keep app startup resilient; refund API will still surface explicit errors if DB permissions block DDL.
@@ -42,8 +44,28 @@ public class TransactionSchemaCompatibilityInitializer {
         return count != null && count > 0;
     }
 
-    private void ensureStripeSessionIdColumnExists() {
+    private void ensureTrxIdColumnExists() {
         Integer count = jdbcTemplate.queryForObject(
+                """
+                SELECT COUNT(*)
+                FROM information_schema.columns
+                WHERE table_schema = DATABASE()
+                  AND table_name = 'transactions'
+                  AND column_name = 'trx_id'
+                """,
+                Integer.class
+        );
+
+        if (count != null && count > 0) {
+            return;
+        }
+
+        jdbcTemplate.execute("ALTER TABLE transactions ADD COLUMN trx_id VARCHAR(255) NULL AFTER payment_id");
+        log.info("Applied schema compatibility fix: added transactions.trx_id");
+    }
+
+    private void backfillTrxIdFromLegacyStripeColumn() {
+        Integer hasLegacyStripeColumn = jdbcTemplate.queryForObject(
                 """
                 SELECT COUNT(*)
                 FROM information_schema.columns
@@ -54,33 +76,56 @@ public class TransactionSchemaCompatibilityInitializer {
                 Integer.class
         );
 
-        if (count != null && count > 0) {
+        if (hasLegacyStripeColumn == null || hasLegacyStripeColumn == 0) {
             return;
         }
 
-        jdbcTemplate.execute("ALTER TABLE transactions ADD COLUMN stripe_session_id VARCHAR(255) NULL AFTER payment_id");
-        log.info("Applied schema compatibility fix: added transactions.stripe_session_id");
+        jdbcTemplate.execute("UPDATE transactions SET trx_id = stripe_session_id WHERE trx_id IS NULL AND stripe_session_id IS NOT NULL");
+        log.info("Applied schema compatibility fix: backfilled transactions.trx_id from legacy stripe_session_id");
     }
 
-    private void ensureStripeSessionIdIsNullable() {
-        String isNullable = jdbcTemplate.queryForObject(
+    private void ensureTrxIdIndex() {
+        try {
+            Integer indexCount = jdbcTemplate.queryForObject(
+                    """
+                    SELECT COUNT(*)
+                    FROM information_schema.statistics
+                    WHERE table_schema = DATABASE()
+                      AND table_name = 'transactions'
+                      AND index_name = 'ux_transactions_trx_id'
+                    """,
+                    Integer.class
+            );
+
+            if (indexCount != null && indexCount > 0) {
+                return;
+            }
+
+            jdbcTemplate.execute("CREATE UNIQUE INDEX ux_transactions_trx_id ON transactions(trx_id)");
+            log.info("Applied schema compatibility fix: added unique index on transactions.trx_id");
+        } catch (Exception ex) {
+            log.warn("Could not create unique index on transactions.trx_id. Continuing startup.", ex);
+        }
+    }
+
+    private void dropLegacyStripeSessionIdColumn() {
+        Integer hasLegacyStripeColumn = jdbcTemplate.queryForObject(
                 """
-                SELECT is_nullable
+                SELECT COUNT(*)
                 FROM information_schema.columns
                 WHERE table_schema = DATABASE()
                   AND table_name = 'transactions'
                   AND column_name = 'stripe_session_id'
-                LIMIT 1
                 """,
-                String.class
+                Integer.class
         );
 
-        if (isNullable == null || "YES".equalsIgnoreCase(isNullable)) {
+        if (hasLegacyStripeColumn == null || hasLegacyStripeColumn == 0) {
             return;
         }
 
-        jdbcTemplate.execute("ALTER TABLE transactions MODIFY COLUMN stripe_session_id VARCHAR(255) NULL");
-        log.info("Applied schema compatibility fix: changed transactions.stripe_session_id to NULLABLE");
+        jdbcTemplate.execute("ALTER TABLE transactions DROP COLUMN stripe_session_id");
+        log.info("Applied schema compatibility fix: dropped legacy transactions.stripe_session_id");
     }
 
     private void ensureRefundedStatusExists() {

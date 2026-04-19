@@ -20,15 +20,17 @@ import org.springframework.http.HttpEntity;
 import org.springframework.http.HttpHeaders;
 import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.access.AccessDeniedException;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.util.StringUtils;
 import org.springframework.web.client.HttpStatusCodeException;
 import org.springframework.web.client.RestTemplate;
-import org.springframework.jdbc.core.JdbcTemplate;
 
 import java.math.BigDecimal;
 import java.math.RoundingMode;
+import java.time.Duration;
+import java.time.LocalDateTime;
 import java.util.HashMap;
 import java.util.Map;
 
@@ -52,9 +54,6 @@ public class PaymentService {
     @Autowired
     private RestTemplate restTemplate;
 
-    @Autowired
-    private JdbcTemplate jdbcTemplate;
-
     @Value("${bkash.app.key:}")
     private String bkashAppKey;
 
@@ -76,8 +75,6 @@ public class PaymentService {
     @Value("${bkash.default.payer.reference:01770618575}")
     private String defaultPayerReference;
 
-    private volatile boolean transactionSchemaChecked = false;
-
     @Transactional
     public Map<String, Object> createBkashPayment(Long userId, Long bookingId) {
         validateBkashConfig();
@@ -86,7 +83,7 @@ public class PaymentService {
                 .orElseThrow(() -> new ResourceNotFoundException("Booking not found"));
 
         if (!booking.getUserId().equals(userId)) {
-            throw new BadRequestException("You can only pay for your own bookings");
+            throw new AccessDeniedException("You can only pay for your own bookings");
         }
 
         if (booking.getStatus() == BookingStatus.CANCELLED) {
@@ -141,12 +138,12 @@ public class PaymentService {
         transaction.setStatus(TransactionStatus.PENDING);
         transaction.setPaymentId(paymentId);
         try {
-            ensureTransactionSchemaCompatible();
             Transaction existing = transactionRepository.findByPaymentId(paymentId).orElse(null);
             if (existing != null) {
                 existing.setBookingId(booking.getId());
                 existing.setAmount(amount);
                 existing.setStatus(TransactionStatus.PENDING);
+                existing.setTrxId(null);
                 transactionRepository.save(existing);
             } else {
                 transactionRepository.save(transaction);
@@ -183,11 +180,11 @@ public class PaymentService {
                 .orElseThrow(() -> new ResourceNotFoundException("Booking not found for transaction"));
 
         if (!booking.getUserId().equals(userId)) {
-            throw new BadRequestException("You can only execute payment for your own bookings");
+            throw new AccessDeniedException("You can only execute payment for your own bookings");
         }
 
         if (transaction.getStatus() == TransactionStatus.SUCCESS) {
-            return buildExecuteResponse(transaction, booking, paymentId, transaction.getStripeSessionId(), "ALREADY_EXECUTED");
+            return buildExecuteResponse(transaction, booking, paymentId, transaction.getTrxId(), "ALREADY_EXECUTED");
         }
 
         if (booking.getStatus() == BookingStatus.CANCELLED) {
@@ -202,25 +199,70 @@ public class PaymentService {
         String paymentStatus = getFirstNonBlank(executeResponse, "paymentStatus", "transactionStatus");
         String statusCode = asString(executeResponse.get("statusCode"));
         String trxId = getFirstNonBlank(executeResponse, "trxID", "trxId", "trxid");
+        String statusMessage = asString(executeResponse.get("statusMessage"));
 
         boolean isCompleted = "Completed".equalsIgnoreCase(paymentStatus) || "0000".equals(statusCode);
+
+        if (!isCompleted && isSystemError(statusMessage)) {
+            log.warn("bKash execute returned System Error for paymentID={}. Querying payment status as fallback.", paymentId);
+
+            Map<String, Object> queryResponse = queryPaymentStatus(token, paymentId);
+            String queriedPaymentStatus = getFirstNonBlank(queryResponse, "paymentStatus", "transactionStatus");
+            String queriedStatusCode = asString(queryResponse.get("statusCode"));
+            String queriedTrxId = getFirstNonBlank(queryResponse, "trxID", "trxId", "trxid");
+            String queriedStatusMessage = asString(queryResponse.get("statusMessage"));
+
+            boolean queryCompleted = "Completed".equalsIgnoreCase(queriedPaymentStatus) || "0000".equals(queriedStatusCode);
+            if (queryCompleted) {
+                executeResponse = queryResponse;
+                paymentStatus = queriedPaymentStatus;
+                statusCode = queriedStatusCode;
+                trxId = queriedTrxId;
+                statusMessage = queriedStatusMessage;
+                isCompleted = true;
+                log.warn("Recovered execute flow via payment-status fallback for paymentID={}", paymentId);
+            } else {
+                log.warn("Payment status fallback not completed for paymentID={}. Retrying execute once.", paymentId);
+                Map<String, Object> retryExecuteResponse = executePayment(token, paymentId);
+                String retryPaymentStatus = getFirstNonBlank(retryExecuteResponse, "paymentStatus", "transactionStatus");
+                String retryStatusCode = asString(retryExecuteResponse.get("statusCode"));
+                String retryTrxId = getFirstNonBlank(retryExecuteResponse, "trxID", "trxId", "trxid");
+                String retryStatusMessage = asString(retryExecuteResponse.get("statusMessage"));
+
+                boolean retryCompleted = "Completed".equalsIgnoreCase(retryPaymentStatus) || "0000".equals(retryStatusCode);
+                if (retryCompleted) {
+                    executeResponse = retryExecuteResponse;
+                    paymentStatus = retryPaymentStatus;
+                    statusCode = retryStatusCode;
+                    trxId = retryTrxId;
+                    statusMessage = retryStatusMessage;
+                    isCompleted = true;
+                    log.warn("Recovered execute flow via retry for paymentID={}", paymentId);
+                }
+            }
+        }
+
         if (!isCompleted) {
             transaction.setStatus(TransactionStatus.FAILED);
             transactionRepository.save(transaction);
-
-            String statusMessage = asString(executeResponse.get("statusMessage"));
             throw new BadRequestException("bKash execute failed: " + (StringUtils.hasText(statusMessage) ? statusMessage : "Payment not completed"));
         }
 
         if (!StringUtils.hasText(trxId)) {
-            trxId = resolveExecuteTrxId(token, paymentId, transaction);
+            try {
+                trxId = resolveExecuteTrxId(token, paymentId, transaction);
+            } catch (Exception ex) {
+                log.warn("Could not resolve trxID from bKash payment status for paymentID={}", paymentId, ex);
+            }
         }
 
         if (!StringUtils.hasText(trxId)) {
+            transaction.setStatus(TransactionStatus.FAILED);
+            transactionRepository.save(transaction);
             throw new BadRequestException("bKash execute failed: trxID missing in successful payment response");
         }
 
-        Transaction existingByTrx = transactionRepository.findByStripeSessionId(trxId).orElse(null);
+        Transaction existingByTrx = transactionRepository.findByTrxId(trxId).orElse(null);
         if (existingByTrx != null && !existingByTrx.getId().equals(transaction.getId())) {
             Booking existingBooking = bookingRepository.findById(existingByTrx.getBookingId()).orElse(booking);
             if (existingByTrx.getStatus() == TransactionStatus.SUCCESS || existingByTrx.getStatus() == TransactionStatus.REFUNDED) {
@@ -228,13 +270,13 @@ public class PaymentService {
             }
         }
 
-        transaction.setStripeSessionId(trxId);
+        transaction.setTrxId(trxId);
         markPaymentSuccess(transaction, booking);
         log.info("Transaction saved after execute. transactionId={} bookingId={} paymentID={} trxID={} amount={} status={}",
                 transaction.getId(),
                 booking.getId(),
                 transaction.getPaymentId(),
-                transaction.getStripeSessionId(),
+                transaction.getTrxId(),
                 transaction.getAmount(),
                 transaction.getStatus());
 
@@ -247,8 +289,46 @@ public class PaymentService {
         response.put("message", "Payment confirmed successfully");
         response.put("result", result);
         response.put("paymentID", paymentId);
-        response.put("trxID", trxId != null ? trxId : transaction.getStripeSessionId());
+        response.put("trxID", trxId != null ? trxId : transaction.getTrxId());
         response.put("amount", transaction.getAmount());
+        response.put("transactionStatus", transaction.getStatus().name());
+        response.put("bookingStatus", booking.getStatus().name());
+        return response;
+    }
+
+    @Transactional
+    public Map<String, Object> cancelBkashPayment(Long userId, String paymentId) {
+        if (!StringUtils.hasText(paymentId)) {
+            throw new BadRequestException("paymentID is required");
+        }
+
+        Transaction transaction = transactionRepository.findByPaymentId(paymentId)
+                .orElseThrow(() -> new ResourceNotFoundException("Transaction not found for this paymentID"));
+
+        Booking booking = bookingRepository.findById(transaction.getBookingId())
+                .orElseThrow(() -> new ResourceNotFoundException("Booking not found for transaction"));
+
+        if (!booking.getUserId().equals(userId)) {
+            throw new AccessDeniedException("You can only cancel payment for your own bookings");
+        }
+
+        if (transaction.getStatus() == TransactionStatus.SUCCESS || booking.getStatus() == BookingStatus.CONFIRMED) {
+            throw new BadRequestException("Payment already completed. Cannot cancel this payment");
+        }
+
+        boolean alreadyCancelled = transaction.getStatus() == TransactionStatus.FAILED
+                && booking.getStatus() == BookingStatus.CANCELLED;
+
+        transaction.setStatus(TransactionStatus.FAILED);
+        booking.setStatus(BookingStatus.CANCELLED);
+        transactionRepository.save(transaction);
+        bookingRepository.save(booking);
+
+        Map<String, Object> response = new HashMap<>();
+        response.put("status", "SUCCESS");
+        response.put("message", "Payment cancelled and booking released");
+        response.put("result", alreadyCancelled ? "ALREADY_CANCELLED" : "CANCELLED");
+        response.put("paymentID", transaction.getPaymentId());
         response.put("transactionStatus", transaction.getStatus().name());
         response.put("bookingStatus", booking.getStatus().name());
         return response;
@@ -265,7 +345,7 @@ public class PaymentService {
             .orElseThrow(() -> new BadRequestException("Invalid refund request"));
 
         if (!booking.getUserId().equals(userId)) {
-            throw new BadRequestException("Invalid refund request");
+            throw new AccessDeniedException("You are not allowed to request refund for this booking");
         }
 
         if (transaction.getStatus() == TransactionStatus.REFUNDED) {
@@ -277,6 +357,8 @@ public class PaymentService {
                 || !StringUtils.hasText(transaction.getPaymentId())) {
             throw new BadRequestException("Invalid refund request");
         }
+
+        enforceRefundAdvanceWindow(booking);
 
         String token = grantToken();
         String trxId = resolveRefundTrxId(token, transaction);
@@ -367,12 +449,30 @@ public class PaymentService {
         throw new BadRequestException(failureMessage.toString());
     }
 
+    private void enforceRefundAdvanceWindow(Booking booking) {
+        Slot slot = slotRepository.findById(booking.getSlotId())
+                .orElseThrow(() -> new BadRequestException("Invalid refund request"));
+
+        LocalDateTime bookingStartDateTime = LocalDateTime.of(booking.getBookingDate(), slot.getStartTime());
+        LocalDateTime now = LocalDateTime.now();
+        Duration timeUntilBooking = Duration.between(now, bookingStartDateTime);
+
+        if (timeUntilBooking.compareTo(Duration.ofHours(24)) < 0) {
+            throw new BadRequestException("Not eligible for refund: Cancellations must be made at least 24 hours in advance.");
+        }
+    }
+
     private boolean isAlreadyReversedRefund(String statusCode, String statusMessage) {
         if ("2034".equals(statusCode)) {
             return true;
         }
         return StringUtils.hasText(statusMessage)
                 && statusMessage.toLowerCase().contains("has been reversed");
+    }
+
+    private boolean isSystemError(String statusMessage) {
+        return StringUtils.hasText(statusMessage)
+                && statusMessage.toLowerCase().contains("system error");
     }
 
     private Map<String, Object> buildRefundResponse(Transaction transaction, Booking booking, String result) {
@@ -382,7 +482,7 @@ public class PaymentService {
         response.put("result", result);
         response.put("transactionId", transaction.getId());
         response.put("paymentID", transaction.getPaymentId());
-        response.put("trxID", transaction.getStripeSessionId());
+        response.put("trxID", transaction.getTrxId());
         response.put("amount", transaction.getAmount());
         response.put("transactionStatus", transaction.getStatus().name());
         response.put("bookingStatus", booking.getStatus().name());
@@ -445,7 +545,7 @@ public class PaymentService {
         body.put("intent", "sale");
         body.put("payerReference", payerReference);
         body.put("merchantInvoiceNumber", String.valueOf(bookingId));
-        body.put("callbackURL", "http://localhost:3000/payment-success");
+        body.put("callbackURL", buildPaymentCallbackUrl());
 
         return postForMap(url, headers, body, "create payment");
     }
@@ -497,22 +597,21 @@ public class PaymentService {
     }
 
     private String resolveRefundTrxId(String token, Transaction transaction) {
-        String storedTrxId = transaction.getStripeSessionId();
-        String paymentId = transaction.getPaymentId();
+        String storedTrxId = transaction.getTrxId();
 
-        if (StringUtils.hasText(storedTrxId) && !storedTrxId.equals(paymentId)) {
+        if (StringUtils.hasText(storedTrxId)) {
             return storedTrxId;
         }
 
         log.warn("Stored trxID missing or legacy for transactionId={} paymentId={}. Querying bKash payment status.",
                 transaction.getId(),
-                paymentId);
+                transaction.getPaymentId());
 
-        Map<String, Object> queryResponse = queryPaymentStatus(token, paymentId);
+        Map<String, Object> queryResponse = queryPaymentStatus(token, transaction.getPaymentId());
         String queriedTrxId = getFirstNonBlank(queryResponse, "trxID", "trxId", "trxid");
 
-        if (StringUtils.hasText(queriedTrxId) && !queriedTrxId.equals(paymentId)) {
-            transaction.setStripeSessionId(queriedTrxId);
+        if (StringUtils.hasText(queriedTrxId)) {
+            transaction.setTrxId(queriedTrxId);
             transactionRepository.save(transaction);
             return queriedTrxId;
         }
@@ -524,7 +623,7 @@ public class PaymentService {
         Map<String, Object> queryResponse = queryPaymentStatus(token, paymentId);
         String queriedTrxId = getFirstNonBlank(queryResponse, "trxID", "trxId", "trxid");
         if (StringUtils.hasText(queriedTrxId)) {
-            transaction.setStripeSessionId(queriedTrxId);
+            transaction.setTrxId(queriedTrxId);
             transactionRepository.save(transaction);
             return queriedTrxId;
         }
@@ -559,6 +658,19 @@ public class PaymentService {
             url = url.substring(0, url.length() - 1);
         }
         return url;
+    }
+
+    private String buildPaymentCallbackUrl() {
+        String baseUrl = frontendUrl;
+        if (!StringUtils.hasText(baseUrl)) {
+            baseUrl = "http://localhost:3000";
+        }
+
+        while (baseUrl.endsWith("/")) {
+            baseUrl = baseUrl.substring(0, baseUrl.length() - 1);
+        }
+
+        return baseUrl + "/payment-success";
     }
 
     private void validateBkashConfig() {
@@ -601,50 +713,6 @@ public class PaymentService {
         }
 
         return defaultPayerReference;
-    }
-
-    private synchronized void ensureTransactionSchemaCompatible() {
-        if (transactionSchemaChecked) {
-            return;
-        }
-
-        Integer stripeColumnCount = jdbcTemplate.queryForObject(
-                "SELECT COUNT(*) FROM information_schema.columns " +
-                        "WHERE table_schema = DATABASE() AND table_name = 'transactions' AND column_name = 'stripe_session_id'",
-                Integer.class
-        );
-
-        Integer paymentColumnCount = jdbcTemplate.queryForObject(
-                "SELECT COUNT(*) FROM information_schema.columns " +
-                        "WHERE table_schema = DATABASE() AND table_name = 'transactions' AND column_name = 'payment_id'",
-                Integer.class
-        );
-
-        boolean hasStripeColumn = stripeColumnCount != null && stripeColumnCount > 0;
-        boolean hasPaymentColumn = paymentColumnCount != null && paymentColumnCount > 0;
-
-        if (!hasStripeColumn && hasPaymentColumn) {
-            log.warn("transactions.stripe_session_id missing; adding nullable compatibility column");
-            executeDdlSafely("ALTER TABLE transactions ADD COLUMN stripe_session_id VARCHAR(255) NULL");
-        }
-
-        if (hasStripeColumn && !hasPaymentColumn) {
-            log.warn("transactions.payment_id missing; applying compatibility migration from stripe_session_id");
-            executeDdlSafely("ALTER TABLE transactions ADD COLUMN payment_id VARCHAR(255) NULL");
-            executeDdlSafely("UPDATE transactions SET payment_id = stripe_session_id WHERE payment_id IS NULL");
-            executeDdlSafely("ALTER TABLE transactions MODIFY payment_id VARCHAR(255) NOT NULL");
-            executeDdlSafely("CREATE UNIQUE INDEX ux_transactions_payment_id ON transactions(payment_id)");
-        }
-
-        transactionSchemaChecked = true;
-    }
-
-    private void executeDdlSafely(String sql) {
-        try {
-            jdbcTemplate.execute(sql);
-        } catch (Exception ex) {
-            log.debug("Ignoring schema compatibility SQL failure for [{}]: {}", sql, ex.getMessage());
-        }
     }
 
     private String getFirstNonBlank(Map<String, Object> payload, String... keys) {

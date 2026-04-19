@@ -120,12 +120,12 @@ const ResetPassword = () => {
           )}
 
           <button type="submit" className="btn btn-primary auth-btn reset-password-btn" disabled={loading || isFormInvalid}>
-            {loading ? 'Updating...' : 'Reset Password'}
+            {loading ? 'Updating Password' : 'Reset Password'}
           </button>
         </form>
 
         <div className="auth-footer reset-password-footer">
-          <p><Link to="/login" className="auth-link">Back to login</Link></p>
+          <p><Link to="/login" className="auth-link">Back To Login</Link></p>
         </div>
       </div>
     </div>

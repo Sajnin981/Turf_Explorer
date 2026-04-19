@@ -26,15 +26,14 @@ function extractApiErrorMessage(error, fallbackMessage) {
     }
 
     const status = error.response.status;
-    const statusText = error.response.statusText;
     if (status) {
-      return `Request failed (${status}${statusText ? ` ${statusText}` : ''})`;
+      return 'Something went wrong on our end. Please try again.';
     }
   }
 
   if (error && error.message && String(error.message).trim()) {
     if (String(error.message).trim() === 'Network Error') {
-      return 'Cannot connect to backend server. Please ensure backend is running.';
+      return 'We are having trouble connecting right now. Please try again.';
     }
     return String(error.message);
   }
@@ -56,7 +55,7 @@ export async function executeBkashPayment(paymentID) {
     const response = await api.post('/payment/execute-bkash-payment', { paymentID });
     return response.data;
   } catch (error) {
-    throw new Error(extractApiErrorMessage(error, 'Payment confirmation failed'));
+    throw new Error(extractApiErrorMessage(error, 'Payment confirmation failed.'));
   }
 }
 
@@ -65,6 +64,15 @@ export async function refundBkashTransaction(transactionId) {
     const response = await api.post(`/payment/refund/${transactionId}`);
     return response.data;
   } catch (error) {
-    throw new Error(extractApiErrorMessage(error, 'Refund request failed'));
+    throw new Error(extractApiErrorMessage(error, 'Refund request failed.'));
+  }
+}
+
+export async function cancelBkashPayment(paymentID) {
+  try {
+    const response = await api.post(`/payment/cancel-payment/${encodeURIComponent(paymentID)}`);
+    return response.data;
+  } catch (error) {
+    throw new Error(extractApiErrorMessage(error, 'Payment cancellation could not be completed. Please try again.'));
   }
 }

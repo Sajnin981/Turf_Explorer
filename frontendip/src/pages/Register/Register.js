@@ -22,16 +22,13 @@ const Register = () => {
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
 
-  function getRegisterErrorMessage(err) {
-    if (err && err.response && err.response.data && err.response.data.message) {
-      return err.response.data.message;
-    }
+  function getRegisterErrorMessage() {
     return 'Registration failed. Please try again.';
   }
 
   function getSubmitButtonText() {
     if (loading) {
-      return 'Creating Account...';
+      return 'Creating Account';
     }
     return 'Create Account';
   }
@@ -41,15 +38,15 @@ const Register = () => {
     setError('');
     
     if (password !== confirmPassword) {
-      setError('Passwords do not match!');
-      showError('Passwords do not match!');
+      setError('Passwords do not match.');
+      showError('Passwords do not match.');
       return;
     }
 
     setLoading(true);
     try {
       await register(name, email, password, phone, address, role);
-      showSuccess('Signup successful. Please verify the OTP sent to your email.');
+      showSuccess('Sign up successful. Please verify the OTP sent to your email.');
       navigate('/verify-otp', { state: { email } });
     } catch (err) {
       const msg = getRegisterErrorMessage(err);

@@ -10,6 +10,7 @@ import java.util.concurrent.ConcurrentHashMap;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
+import jakarta.validation.Valid;
 import org.springframework.web.bind.annotation.CrossOrigin;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
@@ -59,7 +60,7 @@ public class ChatController {
     }
 
     @PostMapping
-    public Map<String, String> chat(@RequestBody ChatRequest request) {
+    public Map<String, String> chat(@Valid @RequestBody ChatRequest request) {
         String message = safeValue(request.getMessage(), "").trim();
         String sessionId = safeValue(request.getSessionId(), UUID.randomUUID().toString());
         String userRole = safeValue(request.getUserRole(), "guest").trim().toLowerCase(Locale.ROOT);
@@ -218,11 +219,54 @@ public class ChatController {
             return ChatIntent.FIND_BEST_TURF;
         }
 
+        if (containsAny(q, "near me", "nearby", "nearest", "around me", "closest turf", "closest")) {
+            return ChatIntent.FIND_BEST_TURF;
+        }
+
+        if (isTurfDiscoveryQuery(q)) {
+            return ChatIntent.FIND_BEST_TURF;
+        }
+
         if (containsAny(q, "that", "this", "it", "what about", "and then")) {
             return lastIntent;
         }
 
         return ChatIntent.GENERAL;
+    }
+
+    private boolean isTurfDiscoveryQuery(String q) {
+        if (q == null || q.isBlank()) {
+            return false;
+        }
+
+        if (containsAny(q, "near me", "nearby", "nearest", "around me", "closest turf", "closest")) {
+            return true;
+        }
+
+        if (!q.contains("turf") && !q.contains("turfs")) {
+            return false;
+        }
+
+        if (containsAny(
+                q,
+                "find",
+                "suggest",
+                "recommend",
+                "show",
+                "list",
+                "nearest",
+                "near me",
+                "nearby",
+                "around me",
+                "available",
+                "cheap",
+                "affordable",
+                "price"
+        )) {
+            return true;
+        }
+
+        return BUDGET_PATTERN.matcher(q).find() || RADIUS_PATTERN.matcher(q).find();
     }
 
     private Map<String, String> handleFindBestTurf(ChatRequest request, String message) {

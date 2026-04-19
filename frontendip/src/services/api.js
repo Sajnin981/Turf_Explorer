@@ -1,5 +1,7 @@
 import axios from 'axios';
 
+let lastNetworkErrorToastAt = 0;
+
 const api = axios.create({
   baseURL: 'http://localhost:8080/api',
   headers: {
@@ -25,6 +27,26 @@ api.interceptors.response.use(
   (error) => {
     const hasResponse = error && error.response;
     const isUnauthorized = hasResponse && error.response.status === 401;
+    const isNetworkError = !hasResponse && (
+      (error && error.code === 'ERR_NETWORK')
+      || (error && error.message === 'Network Error')
+      || (typeof navigator !== 'undefined' && navigator.onLine === false)
+    );
+
+    if (isNetworkError) {
+      const now = Date.now();
+      const throttleMs = 4000;
+      if (now - lastNetworkErrorToastAt > throttleMs) {
+        lastNetworkErrorToastAt = now;
+        if (typeof window !== 'undefined') {
+          window.dispatchEvent(new CustomEvent('app:network-error', {
+            detail: {
+              message: 'We are having trouble connecting right now. Please try again.'
+            }
+          }));
+        }
+      }
+    }
 
     if (isUnauthorized) {
       localStorage.removeItem('token');

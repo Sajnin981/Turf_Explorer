@@ -52,7 +52,12 @@ public class PendingRegistrationService {
         emailService.sendOtpEmail(normalizedEmail, otp);
     }
 
-    public User verifyOtpAndBuildUser(String email, String otp) {
+    public void clearPendingRegistration(String email) {
+        String normalizedEmail = normalizeEmail(email);
+        pendingRegistrations.remove(normalizedEmail);
+    }
+
+    public User verifyOtpAndBuildUser(String email, String otp, User existingUser) {
         String normalizedEmail = normalizeEmail(email);
         PendingRegistration pendingRegistration = pendingRegistrations.get(normalizedEmail);
 
@@ -70,7 +75,7 @@ public class PendingRegistrationService {
 
         pendingRegistrations.remove(normalizedEmail);
 
-        User user = new User();
+        User user = existingUser != null ? existingUser : new User();
         user.setName(pendingRegistration.name());
         user.setEmail(pendingRegistration.email());
         user.setPassword(pendingRegistration.passwordHash());

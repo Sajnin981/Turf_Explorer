@@ -1,6 +1,7 @@
 import React, { useEffect, useState } from 'react';
 import { useNavigate, useSearchParams } from 'react-router-dom';
 import { getMyBookings } from '../../services/bookingService';
+import { cancelBkashPayment } from '../../services/paymentService';
 import { useNotification } from '../../context/NotificationContext';
 import './PaymentResult.css';
 
@@ -18,15 +19,15 @@ const PaymentFailed = () => {
     if (isCancelled) {
       return {
         title: 'Payment Cancelled',
-        message: 'Payment cancelled. Your booking remains pending.',
-        notification: 'Payment cancelled. Your booking remains pending.'
+        message: 'Payment cancelled. Your pending booking has been released.',
+        notification: 'Payment cancelled. Releasing your pending booking.'
       };
     }
 
     return {
       title: 'Payment Unsuccessful',
-      message: 'Payment unsuccessful. Your booking remains pending.',
-      notification: 'Payment unsuccessful. Your booking remains pending.'
+      message: 'Payment unsuccessful. Your pending booking has been released.',
+      notification: 'Payment unsuccessful. Releasing your pending booking.'
     };
   }
 
@@ -39,18 +40,35 @@ const PaymentFailed = () => {
       setLoading(true);
       try {
         showInfo(failureContent.notification);
+        const paymentId = searchParams.get('paymentID');
         const bookingIdFromQuery = searchParams.get('bookingId');
         const pendingBookingId = localStorage.getItem('pendingPaymentBookingId');
         const bookingId = Number(bookingIdFromQuery || pendingBookingId);
 
-        if (!bookingId) {
-          return;
+        if (paymentId) {
+          try {
+            await cancelBkashPayment(paymentId);
+          } catch (_cancelError) {
+            showError('Unable to release the pending booking automatically. Please try payment again or contact support.');
+          }
         }
 
+        localStorage.removeItem('pendingPaymentBookingId');
+
         const bookings = await getMyBookings();
-        const matchedBooking = bookings.find(function(item) {
-          return item.id === bookingId;
-        });
+        let matchedBooking = null;
+
+        if (bookingId) {
+          matchedBooking = bookings.find(function(item) {
+            return item.id === bookingId;
+          }) || null;
+        }
+
+        if (!matchedBooking && paymentId) {
+          matchedBooking = bookings.find(function(item) {
+            return item.paymentId === paymentId;
+          }) || null;
+        }
 
         if (isMounted && matchedBooking) {
           setBooking(matchedBooking);
@@ -85,7 +103,7 @@ const PaymentFailed = () => {
         <p>{failureContent.message}</p>
 
         {loading ? (
-          <p className="payment-status-text">Checking booking status...</p>
+          <p className="payment-status-text">Checking booking status.</p>
         ) : (
           <div className="payment-status-box">
             <div className="payment-status-row">
@@ -100,7 +118,7 @@ const PaymentFailed = () => {
         )}
 
         <button className="payment-result-btn" onClick={function() { navigate('/my-bookings'); }}>
-          Back to My Bookings
+          Back To My Bookings
         </button>
       </div>
     </div>

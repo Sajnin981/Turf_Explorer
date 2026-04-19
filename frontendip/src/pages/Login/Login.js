@@ -25,6 +25,11 @@ const Login = () => {
     return 'Login failed. Please check your credentials.';
   }
 
+  function getNormalizedRole(loginResponse) {
+    const rawRole = loginResponse && loginResponse.role ? loginResponse.role : '';
+    return String(rawRole || '').toLowerCase();
+  }
+
   function getUserTabClass() {
     if (loginMode === 'user') {
       return 'tab-button active';
@@ -41,7 +46,7 @@ const Login = () => {
 
   function getSubmitButtonText() {
     if (loading) {
-      return 'Logging in...';
+      return 'Logging In';
     }
     return 'Login';
   }
@@ -51,15 +56,23 @@ const Login = () => {
     setError('');
     
     if (!email || !password) {
-      setError('Please fill in all fields');
-      showError('Please fill in all fields');
+      setError('Please fill in all fields.');
+      showError('Please fill in all fields.');
       return;
     }
 
     setLoading(true);
     try {
       const data = await login(email, password);
-      const role = data.role.toLowerCase();
+      const role = getNormalizedRole(data);
+
+      if (!role) {
+        setError('Login response is invalid. Please try again.');
+        showError('Login response is invalid. Please try again.');
+        logout();
+        setLoading(false);
+        return;
+      }
 
       if (loginMode === 'user' && role === 'admin') {
         setError('Please use Admin Login for admin accounts.');
@@ -82,6 +95,9 @@ const Login = () => {
       if (role === 'admin') {
         showSuccess('Admin login successful.');
         navigate('/admin');
+      } else if (role === 'owner') {
+        showSuccess('Owner login successful.');
+        navigate('/my-turfs');
       } else {
         showSuccess('Login successful.');
         navigate('/turfs');
@@ -105,8 +121,8 @@ const Login = () => {
       <div className="auth-container">
         <div className="auth-content">
           <div className="auth-header">
-            <h1 className="auth-title">Welcome Back!</h1>
-            <p className="auth-subtitle">Login to your account</p>
+            <h1 className="auth-title">Welcome Back</h1>
+            <p className="auth-subtitle">Log in to your account.</p>
           </div>
 
           <div className="login-tabs">
@@ -174,7 +190,7 @@ const Login = () => {
         <div className="auth-image">
           <div className="image-content">
             <div className="image-icon">⚽</div>
-            <h2>Welcome to Turf Explorer</h2>
+            <h2>Welcome To Turf Explorer</h2>
             <p>Book your favorite sports turf in minutes</p>
             <div className="features-list">
               <div className="feature">✓ Quick & Easy Booking</div>

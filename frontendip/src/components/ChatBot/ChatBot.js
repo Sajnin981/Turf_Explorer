@@ -6,6 +6,9 @@ function ChatBot({ onClose }) {
   const [chat, setChat] = useState([]);
   const [location, setLocation] = useState(null);
   const [locationFetched, setLocationFetched] = useState(false);
+  const [sessionId] = useState(function () {
+    return "chat-" + Date.now().toString(36) + "-" + Math.random().toString(36).slice(2, 8);
+  });
   const chatEndRef = useRef(null);
 
   // Example quick options
@@ -14,8 +17,8 @@ function ChatBot({ onClose }) {
     "Cancel",
     "Login",
     "Sign Up",
-    "Best turf near me",
-    "Cheap turf under 1000"
+    "Best Turf Near Me",
+    "Affordable Turfs Under 1000"
   ];
 
   // Scrolls to the bottom of the chat automatically
@@ -29,8 +32,17 @@ function ChatBot({ onClose }) {
     scrollToBottom();
   }, [chat]);
 
-  function getCurrentLocation() {
-    if (locationFetched) {
+  useEffect(function () {
+    getCurrentLocation();
+  }, []);
+
+  function isNearbyTurfQuery(text) {
+    const q = String(text || "").toLowerCase();
+    return /(near me|nearby|nearest|around me|closest|best turf|best turfs|cheap turf|affordable turf|turf under|turf below|turf within)/.test(q);
+  }
+
+  function getCurrentLocation(forceRefresh) {
+    if (locationFetched && !forceRefresh) {
       return Promise.resolve(location);
     }
 
@@ -91,9 +103,13 @@ function ChatBot({ onClose }) {
     setMessage(""); // Clear input
 
     try {
-      const userLocation = await getCurrentLocation();
+      const shouldForceLocationFetch = isNearbyTurfQuery(textToSend) && !location;
+      const userLocation = await getCurrentLocation(shouldForceLocationFetch);
       const payload = {
         message: textToSend,
+        sessionId: sessionId,
+        userRole: localStorage.getItem('userRole') || 'guest',
+        userName: localStorage.getItem('userName') || localStorage.getItem('userEmail') || 'friend'
       };
 
       if (userLocation && userLocation.latitude != null && userLocation.longitude != null) {
@@ -110,12 +126,12 @@ function ChatBot({ onClose }) {
       });
 
       const data = await res.json();
-      const reply = data.reply || "Sorry, no response from server.";
+      const reply = data.reply || "Sorry, I could not get a response right now.";
 
       // Replace the temporary "..." with actual server reply
       updateLastBotMessage(reply);
     } catch (_error) {
-      updateLastBotMessage("Error connecting to server.");
+      updateLastBotMessage("I am having trouble connecting right now. Please try again in a moment.");
     }
   }
 
@@ -181,7 +197,7 @@ function ChatBot({ onClose }) {
           value={message}
           onChange={handleInputChange}
           onKeyDown={handleInputKeyDown}
-          placeholder="Ask something..."
+          placeholder="Ask a question"
         />
         <button onClick={handleSendButtonClick}>Send</button>
       </div>

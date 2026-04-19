@@ -1,9 +1,52 @@
 import React from 'react';
-import { Link } from 'react-router-dom';
+import { Link, useLocation } from 'react-router-dom';
 import './Footer.css';
 
 const Footer = () => {
   const currentYear = new Date().getFullYear();
+  const location = useLocation();
+
+  const isAuthenticated = localStorage.getItem('isLoggedIn') === 'true' && Boolean(localStorage.getItem('token'));
+  const userRole = String(localStorage.getItem('userRole') || '').toLowerCase();
+
+  function getQuickLinks() {
+    const commonLinks = [
+      { to: '/', label: 'Home' },
+      { to: '/turfs', label: 'Find Turfs' }
+    ];
+
+    if (!isAuthenticated) {
+      return [
+        ...commonLinks,
+        { to: '/login', label: 'Login' },
+        { to: '/register', label: 'Register' }
+      ];
+    }
+
+    if (userRole === 'admin') {
+      return [
+        ...commonLinks,
+        { to: '/admin', label: 'Admin Dashboard' }
+      ];
+    }
+
+    if (userRole === 'owner') {
+      return [
+        ...commonLinks,
+        { to: '/my-turfs', label: 'My Turfs' },
+        { to: '/add-turf', label: 'Add Turf' },
+        { to: '/profile', label: 'My Profile' }
+      ];
+    }
+
+    return [
+      ...commonLinks,
+      { to: '/my-bookings', label: 'My Bookings' },
+      { to: '/profile', label: 'My Profile' }
+    ];
+  }
+
+  const quickLinks = getQuickLinks();
 
   return (
     <footer className="footer">
@@ -22,10 +65,14 @@ const Footer = () => {
           <div className="footer-section">
             <h3 className="footer-title">Quick Links</h3>
             <ul className="footer-links">
-              <li><Link to="/">Home</Link></li>
-              <li><Link to="/turfs">Find Turfs</Link></li>
-              <li><Link to="/login">Login</Link></li>
-              <li><Link to="/register">Register</Link></li>
+              {quickLinks.map(function(link) {
+                const isActive = location.pathname === link.to;
+                return (
+                  <li key={link.to + link.label}>
+                    <Link to={link.to} className={isActive ? 'footer-link-active' : ''}>{link.label}</Link>
+                  </li>
+                );
+              })}
             </ul>
           </div>
 

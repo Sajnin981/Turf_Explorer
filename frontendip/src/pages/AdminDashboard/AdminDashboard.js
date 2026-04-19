@@ -1,10 +1,11 @@
 // Admin Dashboard Component
 // Purpose: Allows admin to approve/reject pending turfs and view approved turfs
 
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import { useNavigate } from 'react-router-dom';
 import api from '../../services/api';
 import { useNotification } from '../../context/NotificationContext';
+import ConfirmModal from '../../components/ConfirmModal/ConfirmModal';
 import './AdminDashboard.css';
 
 const AdminDashboard = () => {
@@ -16,6 +17,7 @@ const AdminDashboard = () => {
   const [loading, setLoading] = useState(true);
   const [searchTerm, setSearchTerm] = useState('');
   const [activeTab, setActiveTab] = useState('pending');
+  const [pendingDeclineTurfId, setPendingDeclineTurfId] = useState(null);
 
   function getApiErrorMessage(err, fallback) {
     if (err && err.response && err.response.data && err.response.data.message) {
@@ -43,62 +45,70 @@ const AdminDashboard = () => {
 
   function getEmptyDescription(hasSearch, sectionType) {
     if (hasSearch) {
-      return 'Try a different search term';
+      return 'Try a different search term.';
     }
     if (sectionType === 'pending') {
-      return 'All submissions have been reviewed!';
+      return 'All submissions have been reviewed.';
     }
-    return 'Start by approving some pending turfs!';
+    return 'Start by approving pending turfs.';
   }
 
-  useEffect(function() {
-    const isAdmin = localStorage.getItem('userRole') === 'admin';
-    const isLoggedIn = localStorage.getItem('isLoggedIn') === 'true';
-    if (!isLoggedIn || !isAdmin) {
-      showError('Access denied! Admin login required.');
-      navigate('/login');
-      return;
-    }
-    loadTurfs();
-  }, [navigate, showError]);
-
-  async function loadTurfs() {
+  const loadTurfs = useCallback(async function() {
     setLoading(true);
     try {
       const [pendingRes, approvedRes] = await Promise.all([
         api.get('/admin/pending-turfs'),
         api.get('/admin/approved-turfs')
       ]);
-      setPendingTurfs(pendingRes.data);
-      setApprovedTurfs(approvedRes.data);
+      setPendingTurfs(Array.isArray(pendingRes.data) ? pendingRes.data : []);
+      setApprovedTurfs(Array.isArray(approvedRes.data) ? approvedRes.data : []);
     } catch (err) {
-      showError('Failed to load turf data.');
+      showError('Unable to load turf information.');
     } finally {
       setLoading(false);
     }
-  }
+  }, [showError]);
+
+  useEffect(function() {
+    const isAdmin = localStorage.getItem('userRole') === 'admin';
+    const isLoggedIn = localStorage.getItem('isLoggedIn') === 'true';
+    if (!isLoggedIn || !isAdmin) {
+      showError('Access denied. Admin login is required.');
+      navigate('/login');
+      return;
+    }
+    loadTurfs();
+  }, [navigate, showError, loadTurfs]);
 
   async function handleApprove(turfId) {
     try {
       await api.put(`/admin/approve/${turfId}`);
-      showSuccess('✅ Turf approved and is now live on the site.');
+      showSuccess('Turf approved and now live on the site.');
       loadTurfs();
     } catch (err) {
       showError(getApiErrorMessage(err, 'Failed to approve turf.'));
     }
   }
 
-  async function handleDecline(turfId) {
-    const turf = pendingTurfs.find(function(t) { return t.id === turfId; });
-    const turfName = getTurfNameForConfirm(turf);
-    const shouldDecline = window.confirm(`Decline "${turfName}"? This will reject the submission.`);
-    if (!shouldDecline) {
+  function handleOpenDeclineModal(turfId) {
+    setPendingDeclineTurfId(turfId);
+  }
+
+  function handleCloseDeclineModal() {
+    setPendingDeclineTurfId(null);
+  }
+
+  async function handleConfirmDecline() {
+    if (!pendingDeclineTurfId) {
       return;
     }
 
+    const turfId = pendingDeclineTurfId;
+    setPendingDeclineTurfId(null);
+
     try {
       await api.put(`/admin/reject/${turfId}`);
-      showInfo('Turf has been rejected.');
+      showInfo('Turf was declined successfully.');
       loadTurfs();
     } catch (err) {
       showError(getApiErrorMessage(err, 'Failed to reject turf.'));
@@ -108,9 +118,11 @@ const AdminDashboard = () => {
   const searchLower = searchTerm.toLowerCase();
 
   function turfMatchesSearch(turf) {
+    const safeName = String((turf && turf.name) || '').toLowerCase();
+    const safeLocation = String((turf && turf.location) || '').toLowerCase();
     return (
-      turf.name.toLowerCase().includes(searchLower) ||
-      turf.location.toLowerCase().includes(searchLower)
+      safeName.includes(searchLower) ||
+      safeLocation.includes(searchLower)
     );
   }
 
@@ -122,8 +134,8 @@ const AdminDashboard = () => {
   if (loading) {
     return (
       <div className="admin-dashboard">
-        <div className="admin-dashboard-shell" style={{ textAlign: 'center', padding: '100px 20px' }}>
-          <h2>Loading...</h2>
+        <div className="admin-dashboard-shell page-shell" style={{ textAlign: 'center', padding: '100px 20px' }}>
+          <h2>Loading Dashboard</h2>
         </div>
       </div>
     );
@@ -131,7 +143,7 @@ const AdminDashboard = () => {
 
   return (
     <div className="admin-dashboard">
-      <div className="admin-dashboard-shell">
+      <div className="admin-dashboard-shell page-shell">
         {/* Header */}
         <div className="dashboard-header-admin">
           <div className="header-content">
@@ -202,7 +214,7 @@ const AdminDashboard = () => {
                       <button onClick={function() { handleApprove(turf.id); }} className="btn btn-approve-admin">
                         ✓ Approve
                       </button>
-                      <button onClick={function() { handleDecline(turf.id); }} className="btn btn-decline-admin">
+                      <button onClick={function() { handleOpenDeclineModal(turf.id); }} className="btn btn-decline-admin">
                         ✗ Decline
                       </button>
                     </div>
@@ -220,6 +232,22 @@ const AdminDashboard = () => {
           </div>
         </div>
       </div>
+
+      <ConfirmModal
+        isOpen={pendingDeclineTurfId !== null}
+        title="Decline Turf Submission"
+        message={(() => {
+          const selectedTurf = pendingTurfs.find(function(item) {
+            return item.id === pendingDeclineTurfId;
+          });
+          const turfName = getTurfNameForConfirm(selectedTurf);
+          return `Decline "${turfName}"? This will reject the submission.`;
+        })()}
+        confirmLabel="Yes, Decline"
+        cancelLabel="No, Keep It"
+        onConfirm={handleConfirmDecline}
+        onCancel={handleCloseDeclineModal}
+      />
     </div>
   );
 };

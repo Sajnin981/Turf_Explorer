@@ -42,7 +42,7 @@ const TurfListing = () => {
   }
 
   function getNoResultsMessage() {
-    return 'No turfs found. Please check back later!';
+    return 'No turfs found. Please check back later.';
   }
 
   // Load turfs when page first opens and when query string changes
@@ -210,7 +210,7 @@ const TurfListing = () => {
       return;
     }
 
-    setLocationStatus('Requesting your location...');
+    setLocationStatus('Requesting your location.');
     navigator.geolocation.getCurrentPosition(async function(position) {
       const coords = {
         lat: position.coords.latitude,
@@ -284,8 +284,8 @@ const TurfListing = () => {
   if (loading) {
     return (
       <div className="turf-listing">
-        <div className="container" style={{ textAlign: 'center', padding: '100px 20px' }}>
-          <h2>Loading turfs...</h2>
+        <div className="container page-shell" style={{ textAlign: 'center', padding: '100px 20px' }}>
+          <h2>Loading Turfs</h2>
         </div>
       </div>
     );
@@ -294,8 +294,9 @@ const TurfListing = () => {
   if (error) {
     return (
       <div className="turf-listing">
-        <div className="container" style={{ textAlign: 'center', padding: '100px 20px' }}>
-          <h2 style={{ color: '#e74c3c' }}>{error}</h2>
+        <div className="container page-shell" style={{ textAlign: 'center', padding: '100px 20px' }}>
+          <h2 style={{ color: '#e74c3c' }}>Unable To Load Turfs</h2>
+          <p>{error}</p>
         </div>
       </div>
     );
@@ -305,7 +306,7 @@ const TurfListing = () => {
     <div className="turf-listing">
       {/* Page Header */}
       <div className="listing-header">
-        <div className="container">
+        <div className="container page-shell">
           <h1 className="listing-title">Find Your Perfect Turf</h1>
           <p className="listing-subtitle">Browse and book the best sports turfs in your area.</p>
           {sortBy === 'nearest' && hasDistanceData && (
@@ -314,12 +315,12 @@ const TurfListing = () => {
         </div>
       </div>
 
-      <div className="container">
+      <div className="container page-shell">
         <div className="proximity-tools">
-          <div className="manual-location-form" ref={searchContainerRef}>
+          <div className="hero-search" ref={searchContainerRef}>
             <input
               type="text"
-              className="manual-location-input"
+              className="hero-search-input"
               placeholder="Search by turf name"
               value={searchQuery}
               onChange={function(event) {
@@ -375,7 +376,7 @@ const TurfListing = () => {
                 }
               }}
             />
-            <button className="manual-location-button" onClick={handleNameSearch}>
+            <button className="hero-search-button" onClick={handleNameSearch}>
               Search
             </button>
 

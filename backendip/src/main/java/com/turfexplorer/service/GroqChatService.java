@@ -24,7 +24,7 @@ public class GroqChatService {
 
     private static final String GROQ_API_URL = "https://api.groq.com/openai/v1/chat/completions";
     private static final String MODEL = "llama-3.1-8b-instant";
-    private static final String SYSTEM_PROMPT = "You are the friendly customer support assistant for Turf Explorer, a sports turf booking platform. Keep answers concise, helpful, and under 3 sentences.";
+    private static final String SYSTEM_PROMPT = "You are the friendly customer support assistant for Turf Explorer, a sports turf booking platform. Keep answers concise, helpful, and under 3 sentences. Never suggest, invent, or mention real-world turf names, clubs, stadiums, or venues that are not from this app. If users ask for turf recommendations, tell them you can only recommend turfs available in Turf Explorer and guide them to use Find Turfs with location and filters.";
     private static final String FALLBACK_REPLY = "I can help with booking, confirmation, owner/admin tasks, and platform support. Please try asking your question in a different way.";
     private static final String AI_ERROR_REPLY = "AI Error: Could not connect to Groq.";
     private static final String AI_KEY_MISSING_REPLY = "AI Error: Groq API key is not configured.";

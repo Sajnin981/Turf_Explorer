@@ -1,11 +1,11 @@
 .add-turf-page {
   min-height: calc(100vh - 70px);
-  padding: 40px 20px;
+  padding: 40px 0;
   background: linear-gradient(135deg, #f5f7fa 0%, #c3cfe2 100%);
 }
 
 .add-turf-container {
-  max-width: 900px;
+  width: min(900px, calc(100% - 32px));
   margin: 0 auto;
   background: white;
   border-radius: 12px;
@@ -57,18 +57,18 @@
 .form-group select,
 .form-group textarea {
   padding: 12px 15px;
-  border: 2px solid #e0e0e0;
-  border-radius: 8px;
+  border: 1.5px solid #d1d9e6;
+  border-radius: 10px;
   font-size: 1rem;
   font-family: inherit;
-  transition: all 0.3s ease;
+  transition: border-color 0.2s ease, box-shadow 0.2s ease;
 }
 
 .form-group input:focus,
 .form-group select:focus,
 .form-group textarea:focus {
-  border-color: var(--primary-green);
-  box-shadow: 0 0 0 3px rgba(46, 204, 113, 0.1);
+  border-color: var(--primary-blue);
+  box-shadow: 0 0 0 3px rgba(52, 152, 219, 0.18);
   outline: none;
 }
 
@@ -110,6 +110,10 @@
 .coords-btn:hover {
   background: var(--primary-green);
   color: white;
+}
+
+.coords-btn:active {
+  transform: translateY(1px) scale(0.97);
 }
 
 .error-message {
@@ -154,6 +158,10 @@
   background: rgba(46, 204, 113, 0.05);
 }
 
+.slot-btn:active {
+  transform: translateY(1px) scale(0.98);
+}
+
 .slot-btn.selected {
   background: var(--primary-green);
   border-color: var(--primary-green);
@@ -190,6 +198,10 @@
 
 .btn-secondary:hover {
   background: #5a6268 !important;
+}
+
+.btn-secondary:active {
+  transform: translateY(1px) scale(0.97);
 }
 
 @media (max-width: 768px) {

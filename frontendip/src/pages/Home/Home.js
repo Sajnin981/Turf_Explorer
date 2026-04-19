@@ -38,7 +38,7 @@ const Home = () => {
         <div className="container">
           <div className="hero-content">
             <h1 className="hero-title">
-              Play Football or Cricket Anytime, Book the Nearest Turf in Seconds
+              Play Football Or Cricket Anytime, Book The Nearest Turf In Seconds
             </h1>
             <p className="hero-subtitle">
               Find and book the best turfs with ease.
@@ -117,6 +117,11 @@ const Home = () => {
               <h3>Nearest Turfs</h3>
               <p>Discover nearby turfs based on your current location</p>
             </div>
+            <div className="feature-card">
+              <span className="feature-icon">🛡️</span>
+              <h3>Secure Payments</h3>
+              <p>Experience seamless and secure transactions with our integrated bKash payment gateway.</p>
+            </div>
           </div>
         </div>
       </section>
@@ -124,7 +129,7 @@ const Home = () => {
       <section className="cta-section">
         <div className="container">
           <div className="cta-content">
-            <h2 className="cta-title">Ready to Play?</h2>
+            <h2 className="cta-title">Ready To Play</h2>
             <p className="cta-description">
               Find and book your perfect turf in your city with ease
             </p>

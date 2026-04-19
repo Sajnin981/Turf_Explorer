@@ -2,11 +2,12 @@
 // Purpose: Owner dashboard for managing their submitted turfs
 // Features: View turfs, delete turfs, view bookings, manage slots
 
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { getMyTurfs, deleteTurf, getTurfBookings, updateTurfAvailability } from '../../services/turfService';
 import { addSlot, deleteSlot, getSlotsByTurf, updateSlot } from '../../services/slotService';
 import { useNotification } from '../../context/NotificationContext';
+import ConfirmModal from '../../components/ConfirmModal/ConfirmModal';
 import './MyTurfs.css';
 
 const MyTurfs = () => {
@@ -27,6 +28,8 @@ const MyTurfs = () => {
   const [editingSlot, setEditingSlot] = useState(null);
   const [editSlotForm, setEditSlotForm] = useState({ startTime: '', endTime: '', price: '' });
   const [slotLoading, setSlotLoading] = useState(false);
+  const [pendingDeleteTurf, setPendingDeleteTurf] = useState(null);
+  const [pendingDeleteSlot, setPendingDeleteSlot] = useState(null);
 
   function getApiErrorMessage(err, fallback) {
     if (err && err.response && err.response.data && err.response.data.message) {
@@ -84,14 +87,14 @@ const MyTurfs = () => {
 
   function getSaveSlotButtonLabel() {
     if (slotLoading) {
-      return 'Saving...';
+      return 'Saving';
     }
     return 'Save';
   }
 
   function getAddSlotButtonLabel() {
     if (slotLoading) {
-      return 'Adding...';
+      return 'Adding Slot';
     }
     return '+ Add Slot';
   }
@@ -122,21 +125,7 @@ const MyTurfs = () => {
     setSelectedTurf(null);
   }
 
-  useEffect(function() {
-    const userRole = localStorage.getItem('userRole');
-    if (!localStorage.getItem('userEmail')) {
-      showInfo('Please login first');
-      navigate('/login');
-      return;
-    }
-    if (userRole === 'admin') {
-      navigate('/admin');
-      return;
-    }
-    loadMyTurfs();
-  }, [navigate, showInfo]);
-
-  async function loadMyTurfs() {
+  const loadMyTurfs = useCallback(async function() {
     setLoading(true);
     try {
       const turfs = await getMyTurfs();
@@ -158,14 +147,41 @@ const MyTurfs = () => {
     } finally {
       setLoading(false);
     }
+  }, [showError]);
+
+  useEffect(function() {
+    const userRole = localStorage.getItem('userRole');
+    if (!localStorage.getItem('userEmail')) {
+      showInfo('Please log in to continue.');
+      navigate('/login');
+      return;
+    }
+    if (userRole === 'admin') {
+      navigate('/admin');
+      return;
+    }
+    loadMyTurfs();
+  }, [navigate, showInfo, loadMyTurfs]);
+
+  function handleRequestDeleteTurf(turf) {
+    setPendingDeleteTurf(turf);
   }
 
-  async function handleDelete(turfId) {
-    if (!window.confirm('Are you sure you want to delete this turf?')) return;
+  function handleCancelDeleteTurf() {
+    setPendingDeleteTurf(null);
+  }
+
+  async function handleConfirmDeleteTurf() {
+    if (!pendingDeleteTurf) {
+      return;
+    }
+
+    const turfId = pendingDeleteTurf.id;
+    setPendingDeleteTurf(null);
     try {
       await deleteTurf(turfId);
-      showSuccess('Turf deleted successfully!');
-      loadMyTurfs();
+      showSuccess('Turf deleted successfully.');
+      await loadMyTurfs();
     } catch (err) {
       showError(getApiErrorMessage(err, 'Failed to delete turf.'));
     }
@@ -188,7 +204,7 @@ const MyTurfs = () => {
         price: parseFloat(slotForm.price)
       });
       setSlotForm({ startTime: '', endTime: '', price: '' });
-      showSuccess('Slot added successfully!');
+      showSuccess('Slot added successfully.');
       await loadSlotsForTurf(turfId);
     } catch (err) {
       showError(getApiErrorMessage(err, 'Failed to add slot.'));
@@ -244,7 +260,7 @@ const MyTurfs = () => {
 
   async function handleUpdateSlot(turfId, slotId) {
     if (!editSlotForm.startTime || !editSlotForm.endTime || editSlotForm.price === '') {
-      showInfo('Please fill start time, end time and price.');
+      showInfo('Please fill in start time, end time, and price.');
       return;
     }
 
@@ -256,7 +272,7 @@ const MyTurfs = () => {
         price: parseFloat(editSlotForm.price)
       });
       setEditingSlot(null);
-      showSuccess('Slot updated successfully!');
+      showSuccess('Slot updated successfully.');
       await loadSlotsForTurf(turfId);
     } catch (err) {
       showError(getApiErrorMessage(err, 'Failed to update slot.'));
@@ -265,12 +281,31 @@ const MyTurfs = () => {
     }
   }
 
-  async function handleDeleteSlot(turfId, slotId) {
-    if (!window.confirm('Delete this slot?')) return;
+  function handleRequestDeleteSlot(turfId, slotId, slot) {
+    setPendingDeleteSlot({
+      turfId: turfId,
+      slotId: slotId,
+      slotTime: `${slot.startTime} - ${slot.endTime}`
+    });
+  }
+
+  function handleCancelDeleteSlot() {
+    setPendingDeleteSlot(null);
+  }
+
+  async function handleConfirmDeleteSlot() {
+    if (!pendingDeleteSlot) {
+      return;
+    }
+
+    const turfId = pendingDeleteSlot.turfId;
+    const slotId = pendingDeleteSlot.slotId;
+    setPendingDeleteSlot(null);
+
     try {
       await deleteSlot(slotId);
       setEditingSlot(null);
-      showSuccess('Slot deleted successfully!');
+      showSuccess('Slot deleted successfully.');
       await loadSlotsForTurf(turfId);
     } catch (err) {
       showError(getApiErrorMessage(err, 'Failed to delete slot.'));
@@ -297,8 +332,8 @@ const MyTurfs = () => {
   if (loading) {
     return (
       <div className="my-turfs-page">
-        <div className="my-turfs-shell" style={{ textAlign: 'center', padding: '100px 20px' }}>
-          <h2>Loading your turfs...</h2>
+        <div className="my-turfs-shell page-shell" style={{ textAlign: 'center', padding: '100px 20px' }}>
+          <h2>Loading Your Turfs</h2>
         </div>
       </div>
     );
@@ -306,7 +341,7 @@ const MyTurfs = () => {
 
   return (
     <div className="my-turfs-page">
-      <div className="my-turfs-shell">
+      <div className="my-turfs-shell page-shell">
         <div className="my-turfs-header">
           <h1>My Turfs</h1>
           <p>View all your submitted turfs</p>
@@ -317,7 +352,7 @@ const MyTurfs = () => {
           <div className="no-turfs">
             <div className="no-turfs-icon">🏟️</div>
             <h2>No Turfs Yet</h2>
-            <p>You have not submitted any turfs yet.</p>
+            <p>You have not listed a turf yet. Add your first venue to start receiving bookings from players.</p>
             <button className="btn-primary" onClick={function() { navigate('/add-turf'); }}>
               Add Your First Turf
             </button>
@@ -378,7 +413,7 @@ const MyTurfs = () => {
                       </button>
                       <button
                         onClick={function() { handleToggleAvailability(turf); }}
-                        className="btn btn-action-secondary"
+                        className="btn btn-action-primary"
                       >
                         {turf.available ? '🚫 ' : '✅ '}{getToggleAvailabilityButtonLabel(turf.available)}
                       </button>
@@ -389,7 +424,7 @@ const MyTurfs = () => {
                         🕒 Manage Slots
                       </button>
                       <button
-                        onClick={function() { handleDelete(turf.id); }}
+                        onClick={function() { handleRequestDeleteTurf(turf); }}
                         className="btn btn-delete-my btn-action-danger"
                       >
                         🗑️ Delete
@@ -403,7 +438,7 @@ const MyTurfs = () => {
 
                         {/* Existing slots */}
                         {loadingSlotsFor === turf.id ? (
-                          <p style={{ color: '#999', marginBottom: '12px' }}>Loading slots...</p>
+                          <p style={{ color: '#999', marginBottom: '12px' }}>Loading slots.</p>
                         ) : turfSlots.length > 0 ? (
                           <div style={{ marginBottom: '12px' }}>
                             {turfSlots.map(function(slot) {
@@ -435,10 +470,10 @@ const MyTurfs = () => {
                                     <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: '8px' }}>
                                       <span>{slot.startTime} - {slot.endTime}{getSlotPriceLabel(slot)}</span>
                                       <div style={{ display: 'flex', gap: '6px' }}>
-                                        <button onClick={function() { handleEditSlotStart(turf.id, slot); }} style={{ background: '#f39c12', color: '#fff', border: 'none', borderRadius: '4px', padding: '4px 10px', cursor: 'pointer' }}>
+                                        <button onClick={function() { handleEditSlotStart(turf.id, slot); }} style={{ background: '#2563eb', color: '#fff', border: 'none', borderRadius: '4px', padding: '4px 10px', cursor: 'pointer' }}>
                                           Edit
                                         </button>
-                                        <button onClick={function() { handleDeleteSlot(turf.id, slot.id); }} style={{ background: '#e74c3c', color: '#fff', border: 'none', borderRadius: '4px', padding: '4px 10px', cursor: 'pointer' }}>
+                                        <button onClick={function() { handleRequestDeleteSlot(turf.id, slot.id, slot); }} style={{ background: '#dc2626', color: '#fff', border: 'none', borderRadius: '4px', padding: '4px 10px', cursor: 'pointer' }}>
                                           Delete
                                         </button>
                                       </div>
@@ -481,12 +516,36 @@ const MyTurfs = () => {
         </div>
       </div>
 
+      <ConfirmModal
+        isOpen={pendingDeleteTurf !== null}
+        title="Delete This Turf?"
+        message={pendingDeleteTurf
+          ? `This will permanently remove "${pendingDeleteTurf.name}" and its configured slots from your dashboard. This action cannot be undone.`
+          : 'This turf will be permanently deleted.'}
+        cancelLabel="No, Keep It"
+        confirmLabel="Yes, Delete Turf"
+        onCancel={handleCancelDeleteTurf}
+        onConfirm={handleConfirmDeleteTurf}
+      />
+
+      <ConfirmModal
+        isOpen={pendingDeleteSlot !== null}
+        title="Delete This Time Slot?"
+        message={pendingDeleteSlot
+          ? `Remove slot ${pendingDeleteSlot.slotTime}? Players will no longer be able to book this time.`
+          : 'This slot will be permanently deleted.'}
+        cancelLabel="No, Keep It"
+        confirmLabel="Yes, Delete Slot"
+        onCancel={handleCancelDeleteSlot}
+        onConfirm={handleConfirmDeleteSlot}
+      />
+
       {/* Bookings Modal */}
       {viewingBookings && selectedTurf && (
         <div className="modal-overlay" onClick={closeBookingsModal}>
           <div className="modal-content-bookings" onClick={function(e) { e.stopPropagation(); }}>
             <div className="modal-header">
-              <h2>📋 Bookings for {selectedTurf.name}</h2>
+              <h2>📋 Bookings For {selectedTurf.name}</h2>
               <button className="modal-close" onClick={closeBookingsModal}>✕</button>
             </div>
             <div className="modal-body">

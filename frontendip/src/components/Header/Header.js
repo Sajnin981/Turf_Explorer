@@ -3,7 +3,7 @@
 // Features: Logo, navigation links, login/logout, mobile menu
 
 import React, { useState, useEffect } from 'react';
-import { Link, useLocation, useNavigate } from 'react-router-dom';
+import { Link, NavLink, useLocation, useNavigate } from 'react-router-dom';
 import { logout } from '../../services/authService';
 import { useNotification } from '../../context/NotificationContext';
 import ChatBot from '../ChatBot/ChatBot';
@@ -57,7 +57,7 @@ const Header = () => {
     setUserName('');
     setUserEmail('');
     setUserRole('');
-    showSuccess('Logged out successfully! 👋');
+    showSuccess('You have been logged out successfully.');
     navigate('/');
   }
 
@@ -66,63 +66,74 @@ const Header = () => {
     setIsMenuOpen(!isMenuOpen);
   }
 
-  // Check if a path is the current active page
-  function isActive(path) {
-    return location.pathname === path ? 'active' : '';
-  }
-
   // Function to close mobile menu
   function closeMenu() {
     setIsMenuOpen(false);
   }
 
+  function getNavLinkClassName(navLinkState) {
+    return navLinkState.isActive ? 'nav-link active' : 'nav-link';
+  }
+
+  function getTurfsNavLinkClassName(navLinkState) {
+    const isTurfDetailsPage = location.pathname.startsWith('/turf/');
+    return navLinkState.isActive || isTurfDetailsPage ? 'nav-link active' : 'nav-link';
+  }
+
+  function getProfileNavLinkClassName(navLinkState) {
+    return navLinkState.isActive ? 'nav-link profile-link active' : 'nav-link profile-link';
+  }
+
+  function getAdminNavLinkClassName(navLinkState) {
+    return navLinkState.isActive ? 'nav-link admin-link active' : 'nav-link admin-link';
+  }
+
   return (
     <>
       <header className="header">
-        <div className="container">
-        <div className="header-content">
-          <Link to="/" className="logo">
+        <div className="header-inner">
+          <a href="/" className="logo">
             <span className="logo-icon">⚽</span>
             <span className="logo-text">Turf Explorer</span>
-          </Link>
+          </a>
 
           <nav className={`nav ${isMenuOpen ? 'nav-open' : ''}`}>
-            <Link to="/" className={`nav-link ${isActive('/')}`} onClick={closeMenu}>
+            <NavLink to="/" end className={getNavLinkClassName} onClick={closeMenu}>
               Home
-            </Link>
-            <Link to="/turfs" className={`nav-link ${isActive('/turfs')}`} onClick={closeMenu}>
+            </NavLink>
+            <NavLink to="/turfs" className={getTurfsNavLinkClassName} onClick={closeMenu}>
               Find Turfs
-            </Link>
+            </NavLink>
             
             {isLoggedIn && isOwner() && (
               <>
-                <Link to="/add-turf" className={`nav-link ${isActive('/add-turf')}`} onClick={closeMenu}>
+                <NavLink to="/add-turf" className={getNavLinkClassName} onClick={closeMenu}>
                   Add Turf
-                </Link>
-                <Link to="/my-turfs" className={`nav-link ${isActive('/my-turfs')}`} onClick={closeMenu}>
+                </NavLink>
+                <NavLink to="/my-turfs" className={getNavLinkClassName} onClick={closeMenu}>
                   My Turfs
-                </Link>
-                <Link to="/profile" className={`nav-link profile-link ${isActive('/profile')}`} onClick={closeMenu}>
+                </NavLink>
+                <NavLink to="/profile" className={getProfileNavLinkClassName} onClick={closeMenu}>
                   👤 {displayName}
-                </Link>
+                </NavLink>
               </>
             )}
 
             {isLoggedIn && !isAdmin() && !isOwner() && (
               <>
-                <Link to="/my-bookings" className={`nav-link ${isActive('/my-bookings')}`} onClick={closeMenu}>
+                <NavLink to="/my-bookings" className={getNavLinkClassName} onClick={closeMenu}>
                   Bookings
-                </Link>
-                <Link to="/profile" className={`nav-link profile-link ${isActive('/profile')}`} onClick={closeMenu}>
+                </NavLink>
+                <NavLink to="/profile" className={getProfileNavLinkClassName} onClick={closeMenu}>
                   👤 {displayName}
-                </Link>
+                </NavLink>
               </>
             )}
             
             {isAdmin() && (
-              <Link to="/admin" className={`nav-link admin-link ${isActive('/admin')}`} onClick={closeMenu}>
+              <NavLink to="/admin" className={getAdminNavLinkClassName} onClick={closeMenu}>
                 Admin Dashboard
-              </Link>
+              </NavLink>
             )}
             
             <button
@@ -134,14 +145,14 @@ const Header = () => {
             </button>
 
             {isLoggedIn ? (
-              <button onClick={handleLogout} className="btn btn-primary nav-btn">
+              <button onClick={handleLogout} className="btn nav-btn nav-btn-danger">
                 Logout
               </button>
             ) : (
               <>
-                <Link to="/login" className={`nav-link ${isActive('/login')}`} onClick={closeMenu}>
+                <NavLink to="/login" className={getNavLinkClassName} onClick={closeMenu}>
                   Login
-                </Link>
+                </NavLink>
                 <Link to="/register" className="btn btn-primary nav-btn" onClick={closeMenu}>
                   Sign Up
                 </Link>
@@ -155,7 +166,6 @@ const Header = () => {
             <span></span>
           </button>
         </div>
-      </div>
       </header>
       {chatOpen && <ChatBot onClose={() => setChatOpen(false)} />}
     </>

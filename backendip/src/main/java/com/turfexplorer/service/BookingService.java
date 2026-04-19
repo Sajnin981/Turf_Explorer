@@ -18,10 +18,12 @@ import com.turfexplorer.repository.TransactionRepository;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.security.access.AccessDeniedException;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.List;
 
 @Service
@@ -56,8 +58,9 @@ public class BookingService {
             throw new BadRequestException("Turf is currently unavailable for booking");
         }
 
-        // Verify slot exists
-        Slot slot = slotRepository.findById(request.getSlotId())
+        // Acquire a pessimistic lock on the slot row so concurrent booking attempts
+        // for the same slot serialize at the database level.
+        Slot slot = slotRepository.findByIdForUpdate(request.getSlotId())
                 .orElseThrow(() -> new ResourceNotFoundException("Slot not found"));
 
         // Check if slot belongs to turf
@@ -65,9 +68,14 @@ public class BookingService {
             throw new BadRequestException("Slot does not belong to this turf");
         }
 
-        // Check if slot is already booked for this date
-        if (bookingRepository.findBySlotIdAndBookingDateAndStatus(
-                request.getSlotId(), request.getBookingDate(), BookingStatus.CONFIRMED).isPresent()) {
+        // Block duplicate active bookings on the same slot/date.
+        boolean hasActiveBooking = bookingRepository.existsBySlotIdAndBookingDateAndStatusIn(
+            request.getSlotId(),
+            request.getBookingDate(),
+            Arrays.asList(BookingStatus.PENDING, BookingStatus.CONFIRMED)
+        );
+
+        if (hasActiveBooking) {
             throw new BadRequestException("Slot is already booked for this date");
         }
 
@@ -104,7 +112,7 @@ public class BookingService {
                 .orElseThrow(() -> new ResourceNotFoundException("Booking not found"));
 
         if (!booking.getUserId().equals(userId)) {
-            throw new BadRequestException("You can only cancel your own bookings");
+            throw new AccessDeniedException("You can only cancel your own bookings");
         }
 
         if (booking.getStatus() == BookingStatus.CANCELLED) {
@@ -141,7 +149,7 @@ public class BookingService {
                 .orElseThrow(() -> new ResourceNotFoundException("Booking not found"));
 
         if (!booking.getUserId().equals(userId)) {
-            throw new BadRequestException("You can only confirm your own bookings");
+            throw new AccessDeniedException("You can only confirm your own bookings");
         }
 
         if (booking.getStatus() == BookingStatus.CANCELLED) {
@@ -173,7 +181,7 @@ public class BookingService {
         response.setId(booking.getId());
         response.setTransactionId(selectedTransaction.map(Transaction::getId).orElse(null));
         response.setPaymentId(selectedTransaction.map(Transaction::getPaymentId).orElse(null));
-        response.setTrxId(selectedTransaction.map(Transaction::getStripeSessionId).orElse(null));
+        response.setTrxId(selectedTransaction.map(Transaction::getTrxId).orElse(null));
         response.setTransactionAmount(selectedTransaction.map(Transaction::getAmount).orElse(null));
         response.setUserId(booking.getUserId());
         response.setTurfId(booking.getTurfId());

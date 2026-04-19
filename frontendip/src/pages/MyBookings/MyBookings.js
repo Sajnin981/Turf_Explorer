@@ -46,47 +46,15 @@ const MyBookings = () => {
     return fallback;
   }
 
-  function getStatusLower(status) {
-    if (status) {
-      return status.toLowerCase();
-    }
-    return 'pending';
-  }
-
-  function formatStatusText(status) {
-    if (!status) {
-      return 'Pending';
-    }
-    const normalized = status.toUpperCase();
-    if (normalized === 'CONFIRMED') {
-      return 'ACTIVE';
-    }
-    if (normalized === 'REFUNDED') {
-      return 'REFUNDED';
-    }
-    return status.charAt(0) + status.slice(1).toLowerCase();
-  }
-
-  function getPaymentClassName(paymentStatus) {
-    const normalized = (paymentStatus || 'PENDING').toLowerCase();
-    if (normalized === 'refunded') {
-      return 'detail-value payment-refunded';
-    }
-    return 'detail-value payment-' + normalized;
-  }
-
   function getPaymentLabelFromTransactionStatus(transactionStatus) {
-    const normalized = (transactionStatus || 'PENDING').toUpperCase();
+    const normalized = (transactionStatus || '').toUpperCase();
     if (normalized === 'SUCCESS') {
       return 'PAID';
     }
     if (normalized === 'REFUNDED') {
       return 'REFUNDED';
     }
-    if (normalized === 'FAILED') {
-      return 'FAILED';
-    }
-    return 'PENDING';
+    return 'UNPAID';
   }
 
   function getBookingStartDateTime(booking) {
@@ -137,34 +105,99 @@ const MyBookings = () => {
 
     if (status === 'CONFIRMED') {
       return {
-        label: 'ACTIVE',
-        className: 'status-active'
+        label: 'CONFIRMED',
+        textClassName: 'status-booking-confirmed',
+        cardClassName: 'confirmed'
+      };
+    }
+
+    if (status === 'PENDING') {
+      return {
+        label: 'PENDING',
+        textClassName: 'status-booking-pending',
+        cardClassName: 'pending'
       };
     }
 
     if (status === 'CANCELLED') {
-      if (isNoRefundCancellation(booking)) {
-        return {
-          label: 'Cancelled (No Refund Eligible)',
-          className: 'status-cancelled-no-refund'
-        };
-      }
-
       return {
-        label: 'Cancelled',
-        className: isRefunded(booking) ? 'status-refunded' : 'status-cancelled'
+        label: 'CANCELLED',
+        textClassName: 'status-booking-cancelled',
+        cardClassName: 'cancelled'
       };
     }
 
     return {
-      label: formatStatusText(status),
-      className: 'status-pending'
+      label: 'PENDING',
+      textClassName: 'status-booking-pending',
+      cardClassName: 'pending'
+    };
+  }
+
+  function getCardAccentClassName(booking) {
+    const status = (booking && booking.status ? booking.status : '').toUpperCase();
+
+    if (status === 'CONFIRMED') {
+      return 'card-accent-confirmed';
+    }
+
+    if (status === 'CANCELLED') {
+      if (isRefunded(booking)) {
+        return 'card-accent-cancelled-refunded';
+      }
+
+      if (isRefundEligible(booking)) {
+        return 'card-accent-cancelled-refund-pending';
+      }
+
+      if (isNoRefundCancellation(booking)) {
+        return 'card-accent-cancelled-no-refund';
+      }
+
+      return 'card-accent-cancelled-refunded';
+    }
+
+    return 'card-accent-pending-payment';
+  }
+
+  function getPaymentStatusMeta(booking) {
+    if (isRefunded(booking)) {
+      return {
+        label: 'REFUNDED',
+        textClassName: 'status-payment-refunded'
+      };
+    }
+
+    if (isRefundEligible(booking)) {
+      return {
+        label: 'REFUND PENDING',
+        textClassName: 'status-payment-refund-pending'
+      };
+    }
+
+    if (isNoRefundCancellation(booking)) {
+      return {
+        label: 'NO REFUND',
+        textClassName: 'status-payment-no-refund'
+      };
+    }
+
+    if (getPaymentLabelFromTransactionStatus(booking.transactionStatus) === 'PAID') {
+      return {
+        label: 'PAID',
+        textClassName: 'status-payment-paid'
+      };
+    }
+
+    return {
+      label: 'UNPAID',
+      textClassName: 'status-payment-unpaid'
     };
   }
 
   function shouldShowPayNowButton(booking) {
     const paymentStatus = getPaymentLabelFromTransactionStatus(booking.transactionStatus);
-    const isAlreadyPaid = paymentStatus === 'PAID';
+    const isAlreadyPaid = paymentStatus === 'PAID' || paymentStatus === 'REFUNDED';
     const isCancelled = booking.status === 'CANCELLED';
 
     if (isAlreadyPaid) {
@@ -193,7 +226,7 @@ const MyBookings = () => {
   useEffect(function() {
     const userRole = localStorage.getItem('userRole');
     if (!localStorage.getItem('isLoggedIn')) {
-      showInfo('Please login first');
+      showInfo('Please log in to continue.');
       navigate('/login');
       return;
     }
@@ -210,7 +243,7 @@ const MyBookings = () => {
       const data = await getMyBookings();
       setBookings(data);
     } catch (err) {
-      showError('Failed to load bookings.');
+      showError('Unable to load your bookings. Please refresh.');
     } finally {
       setLoading(false);
     }
@@ -246,7 +279,7 @@ const MyBookings = () => {
 
   async function handleRefund(booking) {
     if (!booking || !booking.transactionId) {
-      showError('Refund is not available for this booking.');
+      showError('This booking is not eligible for a refund.');
       return;
     }
 
@@ -275,13 +308,13 @@ const MyBookings = () => {
       localStorage.setItem('pendingPaymentBookingId', String(booking.id));
       const session = await createPaymentSession(booking.id);
       if (!session || !session.bkashURL) {
-        throw new Error('bKash URL not found');
+        throw new Error('Payment gateway temporarily unavailable. Please try again.');
       }
 
       window.location.href = session.bkashURL;
     } catch (err) {
       localStorage.removeItem('pendingPaymentBookingId');
-      showError(getErrorMessage(err, 'Failed to start payment. Please try again.'));
+      showError(getErrorMessage(err, 'Unable to initiate payment. Please try again.'));
     } finally {
       setPayingBookingId(null);
     }
@@ -310,12 +343,41 @@ const MyBookings = () => {
         {/* Show bookings list */}
         <div className="bookings-list">
           {bookings.map(function(booking) {
-            const statusMeta = getBookingStatusMeta(booking);
+            const bookingStatusMeta = getBookingStatusMeta(booking);
+            const cardAccentClassName = getCardAccentClassName(booking);
+            const paymentStatusMeta = getPaymentStatusMeta(booking);
             const shouldShowPayNow = shouldShowPayNowButton(booking);
-            const paymentLabel = getPaymentLabelFromTransactionStatus(booking.transactionStatus);
             const canClaimRefund = isRefundEligible(booking);
+            const bookingPaymentStatus = paymentStatusMeta.label;
+            let alertText = '';
+            let alertClass = '';
+
+            if (booking.status === 'CANCELLED') {
+              if (bookingPaymentStatus === 'REFUNDED') {
+                alertText = 'Refunded Successfully';
+                alertClass = 'alert-success';
+              } else if (bookingPaymentStatus === 'REFUND PENDING') {
+                alertText = 'Refund Processing';
+                alertClass = 'alert-warning';
+              } else if (bookingPaymentStatus === 'NO REFUND') {
+                alertText = 'No Refund Eligible';
+                alertClass = 'alert-danger';
+              } else {
+                alertText = 'Booking Cancelled';
+                alertClass = 'alert-neutral';
+              }
+            } else if (booking.status === 'CONFIRMED' && bookingPaymentStatus === 'PAID') {
+              alertText = 'Payment Completed';
+              alertClass = 'alert-success';
+            } else if (booking.status === 'PENDING' && bookingPaymentStatus === 'UNPAID') {
+              alertText = 'Awaiting Payment';
+              alertClass = 'alert-info';
+            } else {
+              alertText = 'Status Pending';
+              alertClass = 'alert-neutral';
+            }
             return (
-            <div key={booking.id} className={`booking-card ${statusMeta.className}`}>
+            <div key={booking.id} className={`booking-card ${cardAccentClassName}`}>
               {/* Booking Info */}
               <div className="booking-info">
                 <h3>{booking.turfName}</h3>
@@ -347,17 +409,17 @@ const MyBookings = () => {
 
                   <div className="detail-item">
                     <span className="detail-icon">📋</span>
-                    <span className="detail-label">Status:</span>
-                    <span className={`detail-value ${statusMeta.className}`}>
-                      {statusMeta.label}
+                    <span className="detail-label status-label">Booking Status:</span>
+                    <span className={`detail-value ${bookingStatusMeta.textClassName}`}>
+                      {bookingStatusMeta.label}
                     </span>
                   </div>
 
                   <div className="detail-item">
                     <span className="detail-icon">💳</span>
-                    <span className="detail-label">Payment:</span>
-                    <span className={getPaymentClassName(paymentLabel)}>
-                      {formatStatusText(paymentLabel)}
+                    <span className="detail-label status-label">Payment Status:</span>
+                    <span className={`detail-value ${paymentStatusMeta.textClassName}`}>
+                      {paymentStatusMeta.label}
                     </span>
                   </div>
 
@@ -365,56 +427,52 @@ const MyBookings = () => {
               </div>
 
               {/* Action Buttons */}
-              <div className="booking-actions">
-                <button
-                  onClick={function() { navigate('/turf/' + booking.turfId); }}
-                  className="btn btn-view"
-                >
-                  View Turf
-                </button>
+              <div className="booking-card-actions">
+                <div className="alert-note-container">
+                  <div className={`booking-alert-note ${alertClass}`}>
+                    {alertText}
+                  </div>
+                </div>
 
-                {shouldShowPayNow && (
+                <div className="action-buttons-group">
                   <button
-                    onClick={function() { handlePayNow(booking); }}
-                    className="btn btn-primary"
-                    disabled={payingBookingId === booking.id}
+                    onClick={function() { navigate('/turf/' + booking.turfId); }}
+                    className="btn btn-view"
                   >
-                    {getPayButtonText(booking.id)}
+                    View Turf
                   </button>
-                )}
 
-                {booking.status !== 'CANCELLED' && (
-                  <button
-                    onClick={function() { handleOpenCancelModal(booking.id); }}
-                    className="btn btn-cancel"
-                    disabled={Boolean(refundingBookingId)}
-                  >
-                    Cancel Booking
-                  </button>
-                )}
+                  {shouldShowPayNow && (
+                    <button
+                      onClick={function() { handlePayNow(booking); }}
+                      className="btn btn-primary"
+                      disabled={payingBookingId === booking.id}
+                    >
+                      {getPayButtonText(booking.id)}
+                    </button>
+                  )}
 
-                {canClaimRefund && (
-                  <button
-                    onClick={function() { handleRefund(booking); }}
-                    className="btn btn-refund"
-                    disabled={refundingBookingId === booking.id}
-                  >
-                    {getRefundButtonText(booking.id)}
-                  </button>
-                )}
+                  {booking.status !== 'CANCELLED' && (
+                    <button
+                      onClick={function() { handleOpenCancelModal(booking.id); }}
+                      className="btn btn-cancel"
+                      disabled={Boolean(refundingBookingId)}
+                    >
+                      Cancel Booking
+                    </button>
+                  )}
+
+                  {canClaimRefund && (
+                    <button
+                      onClick={function() { handleRefund(booking); }}
+                      className="btn btn-refund"
+                      disabled={refundingBookingId === booking.id}
+                    >
+                      {getRefundButtonText(booking.id)}
+                    </button>
+                  )}
+                </div>
               </div>
-
-              {booking.status === 'CANCELLED' && isRefunded(booking) && (
-                <div className="refund-success-info">
-                  Refunded Successfully
-                </div>
-              )}
-
-              {booking.status === 'CANCELLED' && paymentLabel === 'PAID' && !canClaimRefund && !isRefunded(booking) && (
-                <div className="refund-status-info refund-status-no-refund">
-                  No refund available for this cancellation.
-                </div>
-              )}
             </div>
             );
           })}
