@@ -1,6 +1,8 @@
 import React, { useState, useEffect, useRef } from "react";
 import "./Chatbot.css";
 
+const apiBaseUrl = process.env.REACT_APP_API_URL || "http://localhost:8080";
+
 function ChatBot({ onClose }) {
   const [message, setMessage] = useState("");
   const [chat, setChat] = useState([]);
@@ -117,7 +119,7 @@ function ChatBot({ onClose }) {
         payload.longitude = userLocation.longitude;
       }
 
-      const res = await fetch("http://localhost:8080/api/chat", {
+      const res = await fetch(`${apiBaseUrl}/api/chat`, {
         method: "POST",
         headers: {
           "Content-Type": "application/json"

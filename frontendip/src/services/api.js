@@ -1,9 +1,10 @@
 import axios from 'axios';
 
 let lastNetworkErrorToastAt = 0;
+const apiBaseUrl = process.env.REACT_APP_API_URL || 'http://localhost:8080';
 
 const api = axios.create({
-  baseURL: 'http://localhost:8080/api',
+  baseURL: `${apiBaseUrl}/api`,
   headers: {
     'Content-Type': 'application/json',
   },
